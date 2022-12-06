@@ -9,5 +9,5 @@ import java.util.List;
 @AllArgsConstructor
 public class Question {
     private String word;
-    private List<Pair> answersList;
+    private List<Answer> answersList;
 }
