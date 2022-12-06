@@ -1,0 +1,17 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Flashcards</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+</head>
+<body>
+<h1 th:text="${word}"/>
+<button th:text="${answer1}" onClick="window.location.reload();"/>
+<p>
+<button th:text="${answer2}"/>
+<p>
+<button th:text="${answer3}"/>
+<p>
+<button th:text="${answer4}"/>
+</body>
+</html>
