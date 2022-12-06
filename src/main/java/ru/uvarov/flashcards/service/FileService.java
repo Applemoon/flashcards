@@ -29,6 +29,7 @@ public class FileService {
                 }
             });
 
+        System.out.println("Найдено " + pairs.size() + " слов");
         return pairs;
     }
 }
