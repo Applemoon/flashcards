@@ -8,7 +8,7 @@
 <h1 th:text="${question.word}"/>
 <tr th:each="answer: ${question.answersList}">
     <p/>
-    <button th:text="${answer.word}" onClick="window.location.reload();"/>
+    <button th:text="${answer.word}" th:onClick="${answer.isRight} ? 'window.location.reload();' : ''"/>
 </tr>
 </body>
 </html>
