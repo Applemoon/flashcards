@@ -5,7 +5,12 @@ import lombok.Getter;
 
 @Getter
 @AllArgsConstructor
-public class Pair {
+public class Answer {
     private String word;
     private Boolean isRight;
+
+    public Answer(String word) {
+        this.word = word;
+        this.isRight = false;
+    }
 }
