@@ -12,27 +12,27 @@ import java.util.Map;
 @Service
 public class QuizService {
 
-    private static final int ANSWERS_SIZE = 4;
+    private static final int ANSWERS_SIZE = 6;
 
-    final private Map<String, String> pairsMap;
+    final private Map<String, String> wordPairsMap;
 
     public QuizService(FileService fileService) {
-        pairsMap = fileService.readPairs();
-        assert pairsMap.size() >= ANSWERS_SIZE;
+        wordPairsMap = fileService.readPairs();
+        assert wordPairsMap.size() >= ANSWERS_SIZE;
     }
 
     public Question getQuestion() {
         List<Answer> answersList = new ArrayList<>(ANSWERS_SIZE);
 
-        List<String> keys = new ArrayList<>(pairsMap.keySet());
-        Collections.shuffle(keys);
+        List<String> wordsKeys = new ArrayList<>(wordPairsMap.keySet());
+        Collections.shuffle(wordsKeys);
 
-        final String word = keys.get(0);
-        answersList.add(new Answer(pairsMap.get(word), true));
+        final String word = wordsKeys.get(0);
+        answersList.add(new Answer(wordPairsMap.get(word), word, true));
 
         for (int i = 1; i < ANSWERS_SIZE; i++) {
-            final String answer = keys.get(i);
-            answersList.add(new Answer(pairsMap.get(answer)));
+            final String answer = wordsKeys.get(i);
+            answersList.add(new Answer(wordPairsMap.get(answer), answer));
         }
 
         Collections.shuffle(answersList);
