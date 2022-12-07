@@ -3,33 +3,26 @@ package ru.uvarov.flashcards.service;
 import lombok.SneakyThrows;
 import org.springframework.stereotype.Service;
 
-import java.io.File;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.util.HashMap;
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 public class FileService {
 
-    private static final String FILE_NAME = "./questions.txt";
+    private static final String FILE_NAME = "/questions.txt";
 
     @SneakyThrows
     public Map<String, String> readPairs() {
-        Map<String, String> pairs = new HashMap<>();
-        URL url = getClass().getClassLoader().getResource(FILE_NAME);
-        File file = new File(Objects.requireNonNull(url).toURI());
-        Files.readAllLines(file.toPath(), StandardCharsets.UTF_8)
-            .forEach((line) -> {
-                if (!line.startsWith("#") && !line.isEmpty()) {
-                    String[] pair = line.trim().split("=");
-                    pairs.put(pair[0].trim(), pair[1].trim());
-                }
-            });
-
-        System.out.println("Найдено " + pairs.size() + " слов");
-        return pairs;
+        InputStream inputStream = Objects.requireNonNull(getClass().getResourceAsStream(FILE_NAME));
+        return new BufferedReader(new InputStreamReader(inputStream))
+            .lines()
+            .filter(line -> !line.startsWith("#"))
+            .filter(line -> !line.isEmpty())
+            .map(line -> line.trim().split("="))
+            .collect(Collectors.toMap(it -> it[0].trim(), it -> it[1].trim()));
     }
 }

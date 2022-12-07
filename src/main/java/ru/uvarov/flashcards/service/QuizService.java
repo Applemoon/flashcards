@@ -18,6 +18,7 @@ public class QuizService {
 
     public QuizService(FileService fileService) {
         wordPairsMap = fileService.readPairs();
+        System.out.println("Найдено " + wordPairsMap.size() + " слов");
         assert wordPairsMap.size() >= ANSWERS_SIZE;
     }
 
@@ -32,10 +33,11 @@ public class QuizService {
 
         for (int i = 1; i < ANSWERS_SIZE; i++) {
             final String answer = wordsKeys.get(i);
-            answersList.add(new Answer(wordPairsMap.get(answer), answer));
+            answersList.add(new Answer(wordPairsMap.get(answer), answer, false));
         }
 
         Collections.shuffle(answersList);
+        System.out.println(word);
         return new Question(word, answersList);
     }
 }
