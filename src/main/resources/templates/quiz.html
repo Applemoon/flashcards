@@ -13,12 +13,13 @@
         }
     </style>
     <script>
-        function right(element) {
-            element.style.color = 'green';
-            setTimeout(function() { window.location.reload(); }, 1000)
-        }
-        function wrong(element) {
-            element.style.color = 'red';
+        function btnClick(element, isRight) {
+            if (isRight) {
+                element.style.color = 'green';
+                setTimeout(function() { window.location.reload(); }, 1000)
+            } else {
+                element.style.color = 'red';
+            }
         }
     </script>
 </head>
@@ -27,18 +28,10 @@
     <h1 th:text="${question.word}"/>
     <tr th:each="answer: ${question.answersList}">
         <p/>
-        <div th:switch="${answer.isRight}">
-            <button th:case="true"
-                    th:text="${answer.word}"
-                    onClick="right(this)"
-                    th:title="${answer.translate}"
-            />
-            <button th:case="false"
-                    th:text="${answer.word}"
-                    onClick="wrong(this)"
-                    th:title="${answer.translate}"
-            />
-        </div>
+        <button th:text="${answer.word}"
+                th:onClick="btnClick(this, [[${answer.isRight}]])"
+                th:title="${answer.translate}"
+        />
     </tr>
 </div>
 </body>
