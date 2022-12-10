@@ -1,5 +1,6 @@
 package ru.uvarov.flashcards.service;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import ru.uvarov.flashcards.model.Answer;
 import ru.uvarov.flashcards.model.Question;
@@ -12,32 +13,53 @@ import java.util.Map;
 @Service
 public class QuizService {
 
-    private static final int ANSWERS_SIZE = 6;
-
     final private Map<String, String> wordPairsMap;
+    final private Integer answersSize;
 
-    public QuizService(FileService fileService) {
+    public QuizService(FileService fileService, @Value("${quiz.answer.size}") Integer answerSize) {
         wordPairsMap = fileService.readPairs();
+        this.answersSize = answerSize;
+
         System.out.println("Найдено " + wordPairsMap.size() + " слов");
-        assert wordPairsMap.size() >= ANSWERS_SIZE;
+        assert wordPairsMap.size() >= answersSize;
     }
 
     public Question getQuestion() {
-        List<Answer> answersList = new ArrayList<>(ANSWERS_SIZE);
+        List<Answer> answersList = new ArrayList<>(answersSize);
 
-        List<String> wordsKeys = new ArrayList<>(wordPairsMap.keySet());
-        Collections.shuffle(wordsKeys);
+        List<String> wordsKeysRu = new ArrayList<>(wordPairsMap.keySet());
+        Collections.shuffle(wordsKeysRu);
 
-        final String word = wordsKeys.get(0);
-        answersList.add(new Answer(wordPairsMap.get(word), word, true));
+        final String wordRu = wordsKeysRu.get(0);
+        final String translateSrb = wordPairsMap.get(wordRu);
+        answersList.add(new Answer(translateSrb, wordRu, true));
 
-        for (int i = 1; i < ANSWERS_SIZE; i++) {
-            final String answer = wordsKeys.get(i);
-            answersList.add(new Answer(wordPairsMap.get(answer), answer, false));
-        }
+        findAndFillStartingSameLetter(answersList, wordsKeysRu, translateSrb);
+        fillIfNotEnough(answersList, wordsKeysRu);
 
         Collections.shuffle(answersList);
-        System.out.println(word);
-        return new Question(word, answersList);
+        System.out.println(wordRu);
+        return new Question(wordRu, answersList);
+    }
+
+    private void findAndFillStartingSameLetter(List<Answer> answersList, List<String> wordsKeysRu, String translateSrb) {
+        int i = 0;
+        while (answersList.size() < answersSize && i < wordsKeysRu.size()) {
+            final String currentWordRu = wordsKeysRu.get(i);
+            final String currentAnswerSrb = wordPairsMap.get(currentWordRu);
+            final String firstLetter = translateSrb.substring(0, 1);
+            if (!currentAnswerSrb.equals(translateSrb) && currentAnswerSrb.startsWith(firstLetter)) {
+                answersList.add(new Answer(currentAnswerSrb, currentWordRu, false));
+            }
+            i++;
+        }
+    }
+
+    private void fillIfNotEnough(List<Answer> answersList, List<String> wordsKeysRu) {
+        int i = 0;
+        while (answersList.size() < answersSize) {
+            final String answerRu = wordsKeysRu.get(i);
+            answersList.add(new Answer(wordPairsMap.get(answerRu), answerRu, false));
+        }
     }
 }

@@ -1,5 +1,6 @@
 package ru.uvarov.flashcards.service;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.BufferedReader;
@@ -12,10 +13,11 @@ import java.util.stream.Collectors;
 @Service
 public class FileService {
 
-    private static final String FILE_NAME = "/questions.txt";
+    @Value("${quiz.filename}")
+    private String fileName;
 
     public Map<String, String> readPairs() {
-        InputStream inputStream = Objects.requireNonNull(getClass().getResourceAsStream(FILE_NAME));
+        InputStream inputStream = Objects.requireNonNull(getClass().getResourceAsStream(fileName));
         return new BufferedReader(new InputStreamReader(inputStream))
             .lines()
             .filter(line -> !line.startsWith("#"))
