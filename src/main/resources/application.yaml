@@ -1,0 +1,3 @@
+quiz:
+  answer.size: 4
+  filename: "/questions.txt"
