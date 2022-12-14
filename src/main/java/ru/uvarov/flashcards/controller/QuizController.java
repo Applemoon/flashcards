@@ -12,9 +12,15 @@ public class QuizController {
 
     private final QuizService quizService;
 
-    @GetMapping("/")
+    @GetMapping("/quiz")
     public String quiz(Model model) {
         model.addAttribute("question", quizService.getQuestion());
         return "quiz";
+    }
+
+    @GetMapping("/words")
+    public String words(Model model) {
+        model.addAttribute("allWords", quizService.getAllWords());
+        return "words";
     }
 }

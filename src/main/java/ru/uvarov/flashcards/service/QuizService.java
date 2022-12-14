@@ -8,45 +8,45 @@ import ru.uvarov.flashcards.model.Question;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 @Service
 public class QuizService {
 
-    final private Map<String, String> wordPairsMap;
     final private Integer answersSize;
+    final private FileService fileService;
 
-    public QuizService(FileService fileService, @Value("${quiz.answer.size}") Integer answerSize) {
-        wordPairsMap = fileService.readPairs();
-        this.answersSize = answerSize;
-
-        System.out.println("Найдено " + wordPairsMap.size() + " слов");
-        assert wordPairsMap.size() >= answersSize;
+    public QuizService(@Value("${quiz.answer.size}") Integer answersSize, FileService fileService) {
+        this.answersSize = answersSize;
+        this.fileService = fileService;
     }
 
     public Question getQuestion() {
-        List<Answer> answersList = new ArrayList<>(answersSize);
+        final List<Answer> answersList = new ArrayList<>(answersSize);
 
-        List<String> wordsKeysRu = new ArrayList<>(wordPairsMap.keySet());
+        final List<String> wordsKeysRu = new ArrayList<>(fileService.getWordPairs().keySet());
         Collections.shuffle(wordsKeysRu);
 
         final String wordRu = wordsKeysRu.get(0);
-        final String translateSrb = wordPairsMap.get(wordRu);
+        System.out.println(wordRu);
+        final String translateSrb = fileService.getWordPairs().get(wordRu);
         answersList.add(new Answer(translateSrb, wordRu, true));
 
         findAndFillStartingSameLetter(answersList, wordsKeysRu, translateSrb);
         fillIfNotEnough(answersList, wordsKeysRu);
 
         Collections.shuffle(answersList);
-        System.out.println(wordRu);
         return new Question(wordRu, answersList);
+    }
+
+    public List<String> getAllWords() {
+        return fileService.getFileContent();
     }
 
     private void findAndFillStartingSameLetter(List<Answer> answersList, List<String> wordsKeysRu, String translateSrb) {
         int i = 0;
         while (answersList.size() < answersSize && i < wordsKeysRu.size()) {
             final String currentWordRu = wordsKeysRu.get(i);
-            final String currentAnswerSrb = wordPairsMap.get(currentWordRu);
+            final String currentAnswerSrb = fileService.getWordPairs().get(currentWordRu);
             final String firstLetter = translateSrb.substring(0, 1);
             if (!currentAnswerSrb.equals(translateSrb) && currentAnswerSrb.startsWith(firstLetter)) {
                 answersList.add(new Answer(currentAnswerSrb, currentWordRu, false));
@@ -57,9 +57,13 @@ public class QuizService {
 
     private void fillIfNotEnough(List<Answer> answersList, List<String> wordsKeysRu) {
         int i = 0;
-        while (answersList.size() < answersSize) {
+        while (answersList.size() < answersSize && i < wordsKeysRu.size()) {
             final String answerRu = wordsKeysRu.get(i);
-            answersList.add(new Answer(wordPairsMap.get(answerRu), answerRu, false));
+            final Answer answer = new Answer(fileService.getWordPairs().get(answerRu), answerRu, false);
+            if (!answersList.contains(answer)) {
+                answersList.add(answer);
+            }
+            i++;
         }
     }
 }
