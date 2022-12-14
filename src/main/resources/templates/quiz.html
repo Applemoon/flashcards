@@ -1,7 +1,7 @@
 <!DOCTYPE HTML>
 <html xmlns:th="http://www.thymeleaf.org" lang="ru">
 <head>
-    <title>Flashcards</title>
+    <title>Quiz</title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
     <style>
         button {
@@ -10,6 +10,9 @@
         }
         div {
             text-align: center;
+        }
+        a {
+            float: right;
         }
     </style>
     <script>
@@ -25,6 +28,7 @@
     </script>
 </head>
 <body>
+<a href="/words">Words</a>
 <div>
     <h1 th:text="${question.word}"/>
     <tr th:each="answer: ${question.answersList}">
