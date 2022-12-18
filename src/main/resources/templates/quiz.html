@@ -13,22 +13,24 @@
         }
         a {
             float: right;
+            margin: 10px;
         }
     </style>
     <script>
-        function btnClick(element, isRight) {
+        function btnClick(btn, isRight) {
             if (isRight) {
-                element.style.color = 'green';
-                setTimeout(function() { window.location.reload(); }, 1000)
+                btn.style.color = 'green';
+                setTimeout(function() { window.location.reload(); }, 1000);
             } else {
-                element.style.color = 'red';
-                element.textContent = element.textContent + " - " + element.title
+                btn.style.color = 'red';
+                btn.textContent = element.textContent + " - " + element.title;
             }
         }
     </script>
 </head>
 <body>
 <a href="/words">Words</a>
+<a href="/type">Type</a>
 <div>
     <h1 th:text="${question.word}"/>
     <tr th:each="answer: ${question.answersList}">
