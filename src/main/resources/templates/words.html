@@ -6,11 +6,13 @@
     <style>
         a {
             float: right;
+            margin: 10px;
         }
     </style>
 </head>
 <body>
 <a href="/quiz">Quiz</a>
+<a href="/type">Type</a>
 <tr th:each="line: ${allWords}">
     <div th:if="${line != ''}" th:text="${line}"/>
     <p th:unless="${line != ''}"/>

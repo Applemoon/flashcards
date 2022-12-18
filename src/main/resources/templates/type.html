@@ -1,0 +1,31 @@
+<!DOCTYPE HTML>
+<html xmlns:th="http://www.thymeleaf.org" lang="ru">
+<head>
+    <title>Type</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <style>
+        a {
+            float: right;
+            margin: 10px;
+        }
+        input {
+            width: 80%;
+        }
+    </style>
+    <script>
+        function inputClick(input, translate) {
+            if (event.key === 'Enter' && input.value.toLowerCase() == translate.toLowerCase()) {
+                input.style.color = 'green';
+                setTimeout(function() { window.location.reload(); }, 1000);
+            }
+        };
+    </script>
+</head>
+<body>
+<a href="/quiz">Quiz</a>
+<a href="/words">Words</a>
+<h1 th:text="${word}" th:title="${answer}"/>
+<label for="input">Перевод:</label>
+<input id="input" th:onkeydown="inputClick(this, [[${answer}]])" autofocus>
+</body>
+</html>
