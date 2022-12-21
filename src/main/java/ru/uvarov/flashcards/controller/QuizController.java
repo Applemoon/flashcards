@@ -4,8 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
-import ru.uvarov.flashcards.model.Answer;
-import ru.uvarov.flashcards.model.Question;
+import ru.uvarov.flashcards.model.Pair;
 import ru.uvarov.flashcards.service.QuizService;
 
 @Controller
@@ -28,10 +27,9 @@ public class QuizController {
 
     @GetMapping("/type")
     public String type(Model model) {
-        Question question = quizService.getQuestion();
-        String word = question.answersList().stream().filter(Answer::isRight).findFirst().orElseThrow().word();
-        model.addAttribute("answer", question.word());
-        model.addAttribute("word", word);
+        final Pair pair = quizService.getTypeQuestion();
+        model.addAttribute("word", pair.wordSrb());
+        model.addAttribute("answer", pair.wordRu());
         return "type";
     }
 }
