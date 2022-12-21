@@ -3,11 +3,14 @@ package ru.uvarov.flashcards.service;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import ru.uvarov.flashcards.model.Answer;
+import ru.uvarov.flashcards.model.Pair;
 import ru.uvarov.flashcards.model.Question;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Random;
 
 @Service
 public class QuizService {
@@ -40,6 +43,14 @@ public class QuizService {
 
     public List<String> getAllWords() {
         return fileService.getFileContent();
+    }
+
+    public Pair getTypeQuestion() {
+        final Map<String, String> wordPairs = fileService.getWordPairs();
+        final List<String> wordsKeys = new ArrayList<>(wordPairs.keySet());
+        final int randomIndex = new Random().nextInt(wordsKeys.size());
+        final String wordRu = wordsKeys.get(randomIndex);
+        return new Pair(wordRu, wordPairs.get(wordRu));
     }
 
     private void findAndFillStartingSameLetter(List<Answer> answersList, List<String> wordsKeysRu, String translateSrb) {
