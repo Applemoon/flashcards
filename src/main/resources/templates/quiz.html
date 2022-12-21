@@ -12,7 +12,6 @@
             text-align: center;
         }
         a {
-            float: right;
             margin: 10px;
         }
     </style>
@@ -23,7 +22,8 @@
                 setTimeout(function() { window.location.reload(); }, 1000);
             } else {
                 btn.style.color = 'red';
-                btn.textContent = element.textContent + " - " + element.title;
+                btn.textContent = btn.textContent + " - " + btn.title;
+                btn.disabled = true;
             }
         }
     </script>
