@@ -25,11 +25,19 @@ public class QuizController {
         return "words";
     }
 
-    @GetMapping("/type")
-    public String type(Model model) {
+    @GetMapping("/type-srb-ru")
+    public String typeSrbRu(Model model) {
         final Pair pair = quizService.getTypeQuestion();
         model.addAttribute("word", pair.wordSrb());
         model.addAttribute("answer", pair.wordRu());
+        return "type";
+    }
+
+    @GetMapping("/type-ru-srb")
+    public String typeRuSrb(Model model) {
+        final Pair pair = quizService.getTypeQuestion();
+        model.addAttribute("word", pair.wordRu());
+        model.addAttribute("answer", pair.wordSrb());
         return "type";
     }
 }

@@ -15,15 +15,16 @@
         function inputClick(input, translate) {
             if (event.key === 'Enter' && input.value.toLowerCase() == translate.toLowerCase()) {
                 input.style.color = 'green';
-                setTimeout(function() { window.location.reload(); }, 1000);
+                setTimeout(function() { window.location.reload(); }, 700);
             }
         };
     </script>
 </head>
 <body>
 <a href="/quiz">Quiz</a>
-<a href="/words">Words</a>
-<h1 th:text="${word}" th:title="${answer}"/>
+<a href="/type-srb-ru">Type Srb -> Ru</a>
+<a href="/type-ru-srb">Type Ru -> Srb</a>
+<h1 th:text="${word}" th:title="${answer}"></h1>
 <label for="input">Перевод:</label>
 <input id="input" th:onkeydown="inputClick(this, [[${answer}]])" autofocus>
 </body>
