@@ -29,8 +29,7 @@ public class QuizService {
         final List<String> wordsKeysRu = new ArrayList<>(fileService.getWordPairs().keySet());
         Collections.shuffle(wordsKeysRu);
 
-        final String wordRu = wordsKeysRu.get(0);
-        System.out.println(wordRu);
+        final String wordRu = wordsKeysRu.getFirst();
         final String translateSrb = fileService.getWordPairs().get(wordRu);
         answersList.add(new Answer(translateSrb, wordRu, true));
 
