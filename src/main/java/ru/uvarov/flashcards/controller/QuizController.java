@@ -1,10 +1,13 @@
 package ru.uvarov.flashcards.controller;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import ru.uvarov.flashcards.model.Pair;
+import ru.uvarov.flashcards.service.FileService;
 import ru.uvarov.flashcards.service.QuizService;
 
 @Controller
@@ -12,6 +15,7 @@ import ru.uvarov.flashcards.service.QuizService;
 public class QuizController {
 
     private final QuizService quizService;
+    private final FileService fileService;
 
     @GetMapping("/quiz")
     public String quiz(Model model) {
@@ -39,5 +43,11 @@ public class QuizController {
         model.addAttribute("word", pair.wordRu());
         model.addAttribute("answer", pair.wordSrb());
         return "type";
+    }
+
+    @GetMapping("/error")
+    public ResponseEntity<String> addError(@RequestParam String word) {
+        fileService.saveWrongWord(word);
+        return ResponseEntity.ok().build();
     }
 }
