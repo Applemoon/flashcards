@@ -16,14 +16,15 @@
         }
     </style>
     <script>
-        function btnClick(btn, isRight) {
-            if (isRight) {
+        function btnClick(btn, answer) {
+            if (answer.isRight) {
                 btn.style.color = 'green';
                 setTimeout(function() { window.location.reload(); }, 1000);
             } else {
                 btn.style.color = 'red';
                 btn.textContent = btn.textContent + " - " + btn.title;
                 btn.disabled = true;
+                fetch('http://localhost:8080/error?word=' + answer.word)
             }
         }
     </script>
@@ -38,7 +39,7 @@
     <tr th:each="answer: ${question.answersList}">
         <p/>
         <button th:text="${answer.word}"
-                th:onClick="btnClick(this, [[${answer.isRight}]])"
+                th:onClick="btnClick(this, [[${answer}]])"
                 th:title="${answer.translate}"
         />
     </tr>
