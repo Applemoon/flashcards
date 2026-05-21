@@ -3,20 +3,26 @@
 <head>
     <title>Words</title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
-    <style>
-        a {
-            margin: 10px;
-        }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <link rel="stylesheet" href="/style.css"/>
 </head>
 <body>
-<a href="/quiz">Quiz</a>
-<a href="/words">Words</a>
-<a href="/type-srb-ru">Type Srb -> Ru</a>
-<a href="/type-ru-srb">Type Ru -> Srb</a>
-<tr th:each="line: ${allWords}">
-    <div th:if="${line != ''}" th:text="${line}"></div>
-    <p th:unless="${line != ''}"></p>
-</tr>
+<div class="container">
+    <nav class="nav">
+        <a href="/">Меню</a>
+        <a href="/quiz">Quiz</a>
+        <a href="/words">Слова</a>
+        <a href="/type-srb-ru">Srb → Ru</a>
+        <a href="/type-ru-srb">Ru → Srb</a>
+    </nav>
+    <section class="words-list">
+        <th:block th:each="line: ${allWords}">
+            <div th:if="${line != ''}"
+                 th:class="${line.startsWith('#')} ? 'word heading' : 'word'"
+                 th:text="${line}"></div>
+            <div th:unless="${line != ''}" class="word-spacer"></div>
+        </th:block>
+    </section>
+</div>
 </body>
 </html>
