@@ -3,46 +3,42 @@
 <head>
     <title>Quiz</title>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
-    <style>
-        button {
-            font-size: 150%;
-            padding: 15px;
-        }
-        div {
-            text-align: center;
-        }
-        a {
-            margin: 10px;
-        }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <link rel="stylesheet" href="/style.css"/>
     <script>
         function btnClick(btn, answer) {
-            if (answer.isRight) {
+            if (answer.correct) {
                 btn.style.color = 'green';
                 setTimeout(function() { window.location.reload(); }, 1000);
             } else {
                 btn.style.color = 'red';
                 btn.textContent = btn.textContent + " - " + btn.title;
                 btn.disabled = true;
-                fetch('http://localhost:8080/error?word=' + answer.word)
+                fetch('/error?word=' + encodeURIComponent(answer.word))
             }
         }
     </script>
 </head>
 <body>
-<a href="/quiz">Quiz</a>
-<a href="/words">Words</a>
-<a href="/type-srb-ru">Type Srb -> Ru</a>
-<a href="/type-ru-srb">Type Ru -> Srb</a>
-<div>
-    <h1 th:text="${question.word}"/>
-    <tr th:each="answer: ${question.answersList}">
-        <p/>
-        <button th:text="${answer.word}"
-                th:onClick="btnClick(this, [[${answer}]])"
-                th:title="${answer.translate}"
-        />
-    </tr>
+<div class="container">
+    <nav class="nav">
+        <a href="/">Меню</a>
+        <a href="/quiz">Quiz</a>
+        <a href="/words">Слова</a>
+        <a href="/type-srb-ru">Srb → Ru</a>
+        <a href="/type-ru-srb">Ru → Srb</a>
+    </nav>
+    <main class="card">
+        <h1 class="prompt" th:text="${question.word}">Слово</h1>
+        <div class="answers">
+            <button th:each="answer: ${question.answersList}"
+                    class="answer-btn"
+                    th:text="${answer.word}"
+                    th:onClick="btnClick(this, [[${answer}]])"
+                    th:title="${answer.translate}">
+            </button>
+        </div>
+    </main>
 </div>
 </body>
 </html>
