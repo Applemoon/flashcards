@@ -4,7 +4,6 @@ import jakarta.annotation.PostConstruct
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
-import java.io.FileOutputStream
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
@@ -13,7 +12,6 @@ import java.nio.file.Path
 class FileService(
     @Value("\${quiz.word-filename}") private val wordFilename: String,
     @Value("\${quiz.word-write-filename}") private val wordWriteFilename: String,
-    @Value("\${quiz.errors-filename}") private val errorsFilename: String,
 ) {
 
     final lateinit var fileContent: List<String>
@@ -30,12 +28,6 @@ class FileService(
         fileContent = input.bufferedReader(StandardCharsets.UTF_8).use { it.readLines() }
         wordPairs = parseWordPairs(fileContent)
         log.info("Found {} words", wordPairs.size)
-    }
-
-    fun saveWrongWord(word: String) {
-        FileOutputStream(errorsFilename, true).use { fos ->
-            fos.write("$word\n".toByteArray(StandardCharsets.UTF_8))
-        }
     }
 
     @Synchronized

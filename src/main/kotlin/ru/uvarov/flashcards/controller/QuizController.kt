@@ -43,12 +43,6 @@ class QuizController(
         return "type"
     }
 
-    @GetMapping("/error")
-    fun addError(@RequestParam word: String): ResponseEntity<Void> {
-        fileService.saveWrongWord(word)
-        return ResponseEntity.ok().build()
-    }
-
     @DeleteMapping("/word")
     fun deleteWord(@RequestParam word: String): ResponseEntity<Void> {
         fileService.deleteWord(word)

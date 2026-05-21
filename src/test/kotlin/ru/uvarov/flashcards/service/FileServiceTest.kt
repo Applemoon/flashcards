@@ -73,7 +73,7 @@ class FileServiceTest {
 
     @Test
     fun `postConstruct - loads classpath resource - populates state`() {
-        val service = FileService("/test-words.txt", "/tmp/unused-write.txt", "/tmp/unused-errors.txt")
+        val service = FileService("/test-words.txt", "/tmp/unused-write.txt")
 
         service.postConstruct()
 
@@ -85,21 +85,9 @@ class FileServiceTest {
     }
 
     @Test
-    fun `saveWrongWord - appends word - writes utf8 with lf`(@TempDir tmp: Path) {
-        val errors = tmp.resolve("errors.txt")
-        val service = FileService("/test-words.txt", "/tmp/unused-write.txt", errors.toString())
-
-        service.saveWrongWord("ујутру")
-        service.saveWrongWord("ноћ")
-
-        val bytes = Files.readAllBytes(errors)
-        assertEquals("ујутру\nноћ\n", String(bytes, StandardCharsets.UTF_8))
-    }
-
-    @Test
     fun `deleteWord - existing word - removes from in-memory state`(@TempDir tmp: Path) {
         val write = tmp.resolve("questions.txt")
-        val service = FileService("/test-words.txt", write.toString(), "/tmp/unused-errors.txt")
+        val service = FileService("/test-words.txt", write.toString())
         service.postConstruct()
 
         service.deleteWord("вечер")
@@ -112,7 +100,7 @@ class FileServiceTest {
     @Test
     fun `deleteWord - existing word - rewrites file preserving headings and other entries`(@TempDir tmp: Path) {
         val write = tmp.resolve("questions.txt")
-        val service = FileService("/test-words.txt", write.toString(), "/tmp/unused-errors.txt")
+        val service = FileService("/test-words.txt", write.toString())
         service.postConstruct()
 
         service.deleteWord("вечер")
@@ -127,7 +115,7 @@ class FileServiceTest {
     @Test
     fun `deleteWord - unknown word - throws and leaves state untouched`(@TempDir tmp: Path) {
         val write = tmp.resolve("questions.txt")
-        val service = FileService("/test-words.txt", write.toString(), "/tmp/unused-errors.txt")
+        val service = FileService("/test-words.txt", write.toString())
         service.postConstruct()
         val pairsBefore = service.wordPairs.toMap()
 
