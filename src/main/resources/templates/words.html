@@ -5,22 +5,169 @@
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
     <link rel="stylesheet" href="/style.css"/>
+    <script>
+        function onChange(input) {
+            const row = input.closest('.word-row');
+            const newRu = row.querySelector('[data-field="ru"]').value.trim();
+            const newSrb = row.querySelector('[data-field="srb"]').value.trim();
+            const oldRu = row.dataset.key;
+            const oldSrb = row.dataset.val;
+
+            if (!newRu || !newSrb) {
+                input.value = input.dataset.field === 'ru' ? oldRu : oldSrb;
+                return;
+            }
+            if (newRu === oldRu && newSrb === oldSrb) return;
+
+            const params = new URLSearchParams({oldRu: oldRu, newRu: newRu, newSrb: newSrb});
+            fetch('/word?' + params.toString(), { method: 'PUT' })
+                .then(function(response) {
+                    if (!response.ok) {
+                        alert('Не удалось обновить «' + oldRu + '»: ' + response.status);
+                        row.querySelector('[data-field="ru"]').value = oldRu;
+                        row.querySelector('[data-field="srb"]').value = oldSrb;
+                        return;
+                    }
+                    row.dataset.key = newRu;
+                    row.dataset.val = newSrb;
+                });
+        }
+
+        function onDelete(button) {
+            const row = button.closest('.word-row');
+            const key = row.dataset.key;
+            if (!confirm('Удалить «' + key + '» из словаря?')) return;
+            fetch('/word?word=' + encodeURIComponent(key), { method: 'DELETE' })
+                .then(function(response) {
+                    if (!response.ok) {
+                        alert('Не удалось удалить: ' + response.status);
+                        return;
+                    }
+                    row.remove();
+                    const counter = document.getElementById('word-count');
+                    counter.textContent = (parseInt(counter.textContent, 10) - 1).toString();
+                });
+        }
+
+        function onAdd() {
+            const ruInput = document.getElementById('add-ru');
+            const srbInput = document.getElementById('add-srb');
+            const ru = ruInput.value.trim();
+            const srb = srbInput.value.trim();
+            if (!ru || !srb) return;
+
+            const params = new URLSearchParams({newRu: ru, newSrb: srb});
+            fetch('/word?' + params.toString(), { method: 'POST' })
+                .then(function(response) {
+                    if (!response.ok) {
+                        alert('Не удалось добавить «' + ru + '»: ' + response.status);
+                        return;
+                    }
+                    insertWordRow(ru, srb);
+                    ruInput.value = '';
+                    srbInput.value = '';
+                    ruInput.focus();
+                    const counter = document.getElementById('word-count');
+                    counter.textContent = (parseInt(counter.textContent, 10) + 1).toString();
+                });
+        }
+
+        function onAddKey(event) {
+            if (event.key === 'Enter') onAdd();
+        }
+
+        function insertWordRow(ru, srb) {
+            const row = document.createElement('div');
+            row.className = 'word-row';
+            row.dataset.key = ru;
+            row.dataset.val = srb;
+
+            const ruInput = document.createElement('input');
+            ruInput.type = 'text';
+            ruInput.className = 'word-input';
+            ruInput.dataset.field = 'ru';
+            ruInput.value = ru;
+            ruInput.onchange = function() { onChange(this); };
+
+            const eq = document.createElement('span');
+            eq.className = 'word-eq';
+            eq.textContent = '=';
+
+            const srbInput = document.createElement('input');
+            srbInput.type = 'text';
+            srbInput.className = 'word-input';
+            srbInput.dataset.field = 'srb';
+            srbInput.value = srb;
+            srbInput.onchange = function() { onChange(this); };
+
+            const delBtn = document.createElement('button');
+            delBtn.type = 'button';
+            delBtn.className = 'word-delete';
+            delBtn.title = 'Удалить';
+            delBtn.onclick = function() { onDelete(this); };
+            delBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"' +
+                ' stroke-width="2" stroke-linecap="round" aria-hidden="true">' +
+                '<line x1="7" y1="7" x2="17" y2="17"/>' +
+                '<line x1="17" y1="7" x2="7" y2="17"/></svg>';
+
+            row.appendChild(ruInput);
+            row.appendChild(eq);
+            row.appendChild(srbInput);
+            row.appendChild(delBtn);
+
+            document.querySelector('.words-list').appendChild(row);
+        }
+    </script>
 </head>
 <body>
 <div class="container">
     <nav class="nav">
         <a href="/">Меню</a>
         <a href="/quiz">Quiz</a>
-        <a href="/words">Слова</a>
         <a href="/type-srb-ru">Srb → Ru</a>
         <a href="/type-ru-srb">Ru → Srb</a>
+        <a href="/words">Слова</a>
     </nav>
+    <p class="words-count">
+        В словаре <strong id="word-count" th:text="${wordCount}">0</strong> слов
+    </p>
     <section class="words-list">
+        <div class="word-row word-row-add">
+            <input type="text" id="add-ru" class="word-input" placeholder="Русское"
+                   autocomplete="off" onkeydown="onAddKey(event)"/>
+            <span class="word-eq">=</span>
+            <input type="text" id="add-srb" class="word-input" placeholder="Сербское"
+                   autocomplete="off" onkeydown="onAddKey(event)"/>
+            <button type="button" class="word-add" title="Добавить" onclick="onAdd()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" aria-hidden="true">
+                    <line x1="12" y1="6" x2="12" y2="18"/>
+                    <line x1="6" y1="12" x2="18" y2="12"/>
+                </svg>
+            </button>
+        </div>
         <th:block th:each="line: ${allWords}">
-            <div th:if="${line != ''}"
-                 th:class="${line.startsWith('#')} ? 'word heading' : 'word'"
+            <div th:if="${line != '' and line.startsWith('#')}"
+                 class="word heading"
                  th:text="${line}"></div>
-            <div th:unless="${line != ''}" class="word-spacer"></div>
+            <div th:if="${line == ''}" class="word-spacer"></div>
+            <div th:if="${line != '' and !line.startsWith('#')}"
+                 class="word-row"
+                 th:with="key=${#strings.trim(#strings.substringBefore(line, '='))},val=${#strings.trim(#strings.substringAfter(line, '='))}"
+                 th:attr="data-key=${key},data-val=${val}">
+                <input type="text" class="word-input" data-field="ru"
+                       th:value="${key}" onchange="onChange(this)"/>
+                <span class="word-eq">=</span>
+                <input type="text" class="word-input" data-field="srb"
+                       th:value="${val}" onchange="onChange(this)"/>
+                <button type="button" class="word-delete" title="Удалить" onclick="onDelete(this)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" aria-hidden="true">
+                        <line x1="7" y1="7" x2="17" y2="17"/>
+                        <line x1="17" y1="7" x2="7" y2="17"/>
+                    </svg>
+                </button>
+            </div>
         </th:block>
     </section>
 </div>

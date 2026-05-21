@@ -34,13 +34,51 @@ class FileService(
     fun deleteWord(wordRu: String) {
         require(wordRu in wordPairs) { "Unknown word: $wordRu" }
         val newLines = fileContent.filterNot { line -> isWordPairLineFor(line, wordRu) }
+        persist(newLines)
+        log.info("Deleted word '{}', {} words left", wordRu, wordPairs.size)
+    }
+
+    @Synchronized
+    fun addWord(newRu: String, newSrb: String) {
+        val ru = newRu.trim()
+        val srb = newSrb.trim()
+        validateNewPair(ru, srb)
+        require(ru !in wordPairs) { "Duplicate Russian key: $ru" }
+        val newLines = fileContent + "$ru=$srb"
+        persist(newLines)
+        log.info("Added '{}={}', {} words total", ru, srb, wordPairs.size)
+    }
+
+    @Synchronized
+    fun updateWord(oldRu: String, newRu: String, newSrb: String) {
+        require(oldRu in wordPairs) { "Unknown word: $oldRu" }
+        val ru = newRu.trim()
+        val srb = newSrb.trim()
+        validateNewPair(ru, srb)
+        if (ru != oldRu) {
+            require(ru !in wordPairs) { "Duplicate Russian key: $ru" }
+        }
+        val newLines = fileContent.map { line ->
+            if (isWordPairLineFor(line, oldRu)) "$ru=$srb" else line
+        }
+        persist(newLines)
+        log.info("Updated '{}' -> '{}={}'", oldRu, ru, srb)
+    }
+
+    private fun validateNewPair(ru: String, srb: String) {
+        require(ru.isNotEmpty()) { "newRu must not be blank" }
+        require(srb.isNotEmpty()) { "newSrb must not be blank" }
+        require(!ru.startsWith("#")) { "newRu must not start with '#'" }
+        require(!ru.contains("=")) { "newRu must not contain '='" }
+    }
+
+    private fun persist(newLines: List<String>) {
         Files.write(
             Path.of(wordWriteFilename),
             (newLines.joinToString("\n") + "\n").toByteArray(StandardCharsets.UTF_8),
         )
         fileContent = newLines
         wordPairs = parseWordPairs(newLines)
-        log.info("Deleted word '{}', {} words left", wordRu, wordPairs.size)
     }
 
     companion object {
