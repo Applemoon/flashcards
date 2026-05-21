@@ -3,6 +3,7 @@ package ru.uvarov.flashcards.controller
 import org.springframework.http.ResponseEntity
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestParam
 import ru.uvarov.flashcards.service.FileService
@@ -46,5 +47,11 @@ class QuizController(
     fun addError(@RequestParam word: String): ResponseEntity<Void> {
         fileService.saveWrongWord(word)
         return ResponseEntity.ok().build()
+    }
+
+    @DeleteMapping("/word")
+    fun deleteWord(@RequestParam word: String): ResponseEntity<Void> {
+        fileService.deleteWord(word)
+        return ResponseEntity.noContent().build()
     }
 }

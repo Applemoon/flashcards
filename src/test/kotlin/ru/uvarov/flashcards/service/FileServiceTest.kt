@@ -1,6 +1,7 @@
 package ru.uvarov.flashcards.service
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
@@ -72,7 +73,7 @@ class FileServiceTest {
 
     @Test
     fun `postConstruct - loads classpath resource - populates state`() {
-        val service = FileService("/test-words.txt", "/tmp/unused-errors.txt")
+        val service = FileService("/test-words.txt", "/tmp/unused-write.txt", "/tmp/unused-errors.txt")
 
         service.postConstruct()
 
@@ -86,12 +87,55 @@ class FileServiceTest {
     @Test
     fun `saveWrongWord - appends word - writes utf8 with lf`(@TempDir tmp: Path) {
         val errors = tmp.resolve("errors.txt")
-        val service = FileService("/test-words.txt", errors.toString())
+        val service = FileService("/test-words.txt", "/tmp/unused-write.txt", errors.toString())
 
         service.saveWrongWord("ујутру")
         service.saveWrongWord("ноћ")
 
         val bytes = Files.readAllBytes(errors)
         assertEquals("ујутру\nноћ\n", String(bytes, StandardCharsets.UTF_8))
+    }
+
+    @Test
+    fun `deleteWord - existing word - removes from in-memory state`(@TempDir tmp: Path) {
+        val write = tmp.resolve("questions.txt")
+        val service = FileService("/test-words.txt", write.toString(), "/tmp/unused-errors.txt")
+        service.postConstruct()
+
+        service.deleteWord("вечер")
+
+        assertFalse("вечер" in service.wordPairs)
+        assertFalse(service.fileContent.contains("вечер=вече"))
+        assertEquals(3, service.wordPairs.size)
+    }
+
+    @Test
+    fun `deleteWord - existing word - rewrites file preserving headings and other entries`(@TempDir tmp: Path) {
+        val write = tmp.resolve("questions.txt")
+        val service = FileService("/test-words.txt", write.toString(), "/tmp/unused-errors.txt")
+        service.postConstruct()
+
+        service.deleteWord("вечер")
+
+        val written = Files.readString(write, StandardCharsets.UTF_8)
+        assertEquals(
+            "#Категория один\nутром=ујутру\nночь=ноћ\n\n#Категория два\nнеделя=седмица, недеља\n",
+            written,
+        )
+    }
+
+    @Test
+    fun `deleteWord - unknown word - throws and leaves state untouched`(@TempDir tmp: Path) {
+        val write = tmp.resolve("questions.txt")
+        val service = FileService("/test-words.txt", write.toString(), "/tmp/unused-errors.txt")
+        service.postConstruct()
+        val pairsBefore = service.wordPairs.toMap()
+
+        assertThrows<IllegalArgumentException> {
+            service.deleteWord("несуществующее")
+        }
+
+        assertEquals(pairsBefore, service.wordPairs)
+        assertFalse(Files.exists(write), "file must not be created when delete fails")
     }
 }
