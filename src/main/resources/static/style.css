@@ -229,10 +229,22 @@ body {
     transition: transform 0.25s ease;
 }
 
+.words-count {
+    text-align: center;
+    margin: 0 0 20px;
+    color: var(--muted);
+    font-size: 0.95rem;
+}
+
+.words-count strong {
+    color: var(--text);
+    font-weight: 700;
+}
+
 .words-list {
     background: var(--surface);
     border-radius: var(--radius);
-    padding: 24px 28px;
+    padding: 20px 22px;
     box-shadow: var(--shadow);
     border: 1px solid var(--border);
 }
@@ -258,6 +270,109 @@ body {
 .word.heading:first-child { margin-top: 0; padding-top: 4px; }
 
 .word-spacer { height: 12px; }
+
+.word-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 2px;
+}
+
+.word-input {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 8px 10px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 1rem;
+    border-radius: 8px;
+    transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.word-input:hover { border-color: var(--border); }
+
+.word-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: var(--bg);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.word-eq {
+    flex: 0 0 auto;
+    color: var(--muted);
+    font-size: 0.95rem;
+    user-select: none;
+}
+
+.word-delete {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--muted);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.word-delete svg {
+    width: 16px;
+    height: 16px;
+    display: block;
+}
+
+.word-delete:hover {
+    color: #fff;
+    background: var(--accent);
+    border-color: var(--accent);
+}
+
+.word-row-add {
+    padding-bottom: 12px;
+    margin-bottom: 8px;
+    border-bottom: 1px dashed var(--border);
+}
+
+.word-row-add .word-input::placeholder {
+    color: var(--muted);
+    opacity: 0.7;
+}
+
+.word-add {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 1.5px solid var(--accent);
+    background: var(--accent);
+    color: #fff;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: transform 0.1s ease, box-shadow 0.15s ease, filter 0.15s ease;
+}
+
+.word-add:hover {
+    transform: scale(1.06);
+    filter: brightness(1.05);
+    box-shadow: 0 2px 8px var(--accent-soft);
+}
+
+.word-add svg {
+    width: 16px;
+    height: 16px;
+    display: block;
+}
 
 /* Index / landing menu */
 .hero {

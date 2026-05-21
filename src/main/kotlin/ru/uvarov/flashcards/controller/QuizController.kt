@@ -5,6 +5,8 @@ import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestParam
 import ru.uvarov.flashcards.service.FileService
 import ru.uvarov.flashcards.service.QuizService
@@ -24,6 +26,7 @@ class QuizController(
     @GetMapping("/words")
     fun words(model: Model): String {
         model.addAttribute("allWords", quizService.getAllWords())
+        model.addAttribute("wordCount", fileService.wordPairs.size)
         return "words"
     }
 
@@ -46,6 +49,25 @@ class QuizController(
     @DeleteMapping("/word")
     fun deleteWord(@RequestParam word: String): ResponseEntity<Void> {
         fileService.deleteWord(word)
+        return ResponseEntity.noContent().build()
+    }
+
+    @PutMapping("/word")
+    fun updateWord(
+        @RequestParam oldRu: String,
+        @RequestParam newRu: String,
+        @RequestParam newSrb: String,
+    ): ResponseEntity<Void> {
+        fileService.updateWord(oldRu, newRu, newSrb)
+        return ResponseEntity.noContent().build()
+    }
+
+    @PostMapping("/word")
+    fun addWord(
+        @RequestParam newRu: String,
+        @RequestParam newSrb: String,
+    ): ResponseEntity<Void> {
+        fileService.addWord(newRu, newSrb)
         return ResponseEntity.noContent().build()
     }
 }
