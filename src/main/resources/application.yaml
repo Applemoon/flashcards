@@ -1,4 +1,5 @@
 quiz:
   answer-size: 4
   word-filename: "/questions.txt"
+  word-write-filename: "./src/main/resources/questions.txt"
   errors-filename: "./src/main/resources/errors.txt"

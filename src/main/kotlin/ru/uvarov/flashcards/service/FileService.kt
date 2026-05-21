@@ -6,10 +6,13 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import java.io.FileOutputStream
 import java.nio.charset.StandardCharsets
+import java.nio.file.Files
+import java.nio.file.Path
 
 @Service
 class FileService(
     @Value("\${quiz.word-filename}") private val wordFilename: String,
+    @Value("\${quiz.word-write-filename}") private val wordWriteFilename: String,
     @Value("\${quiz.errors-filename}") private val errorsFilename: String,
 ) {
 
@@ -35,6 +38,19 @@ class FileService(
         }
     }
 
+    @Synchronized
+    fun deleteWord(wordRu: String) {
+        require(wordRu in wordPairs) { "Unknown word: $wordRu" }
+        val newLines = fileContent.filterNot { line -> isWordPairLineFor(line, wordRu) }
+        Files.write(
+            Path.of(wordWriteFilename),
+            (newLines.joinToString("\n") + "\n").toByteArray(StandardCharsets.UTF_8),
+        )
+        fileContent = newLines
+        wordPairs = parseWordPairs(newLines)
+        log.info("Deleted word '{}', {} words left", wordRu, wordPairs.size)
+    }
+
     companion object {
         private val log = LoggerFactory.getLogger(FileService::class.java)
 
@@ -49,6 +65,11 @@ class FileService(
                 result[key] = parts[1].trim()
             }
             return result
+        }
+
+        private fun isWordPairLineFor(line: String, wordRu: String): Boolean {
+            if (line.isEmpty() || line.startsWith("#") || !line.contains("=")) return false
+            return line.trim().split("=", limit = 2)[0].trim() == wordRu
         }
     }
 }

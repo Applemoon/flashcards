@@ -190,12 +190,19 @@ body {
     box-shadow: 0 0 0 4px var(--accent-soft);
 }
 
+.skip-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin-top: 28px;
+}
+
 .skip-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    margin-top: 28px;
     padding: 10px 18px;
     background: transparent;
     color: var(--muted);
@@ -214,7 +221,7 @@ body {
     background: var(--accent-soft);
 }
 
-.skip-btn:hover svg { transform: rotate(-45deg); }
+.skip-btn:hover .icon-spin { transform: rotate(-45deg); }
 
 .skip-btn svg {
     width: 16px;
