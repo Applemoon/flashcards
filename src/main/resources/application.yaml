@@ -1,4 +1,4 @@
 quiz:
-  answer.size: 4
+  answer-size: 4
   word-filename: "/questions.txt"
   errors-filename: "./src/main/resources/errors.txt"
