@@ -270,4 +270,94 @@ class FileServiceTest {
         assertThrows<IllegalArgumentException> { service.addWord("a=b", "ново") }
         assertThrows<IllegalArgumentException> { service.addWord("#header", "ново") }
     }
+
+    @Test
+    fun `parseDictionary - line with weight - parses weight value`() {
+        val parsed = FileService.parseDictionary(
+            listOf("утром=ујутру=3", "вечер=вече=-2", "ночь=ноћ")
+        )
+
+        assertEquals(mapOf("утром" to "ујутру", "вечер" to "вече", "ночь" to "ноћ"), parsed.pairs)
+        assertEquals(mapOf("утром" to 3, "вечер" to -2, "ночь" to 0), parsed.weights)
+    }
+
+    @Test
+    fun `parseDictionary - invalid weight format - throws`() {
+        assertThrows<IllegalArgumentException> {
+            FileService.parseDictionary(listOf("утром=ујутру=абв"))
+        }
+    }
+
+    @Test
+    fun `parseDictionary - more than three equals - throws`() {
+        assertThrows<IllegalArgumentException> {
+            FileService.parseDictionary(listOf("а=б=1=2"))
+        }
+    }
+
+    @Test
+    fun `recordAnswer - correct - increments weight and persists`(@TempDir tmp: Path) {
+        val write = tmp.resolve("questions.txt")
+        val service = FileService("/test-words.txt", write.toString())
+        service.postConstruct()
+
+        service.recordAnswer("вечер", correct = true)
+
+        assertEquals(1, service.wordWeights["вечер"])
+        val written = Files.readString(write, StandardCharsets.UTF_8)
+        assertTrue(written.contains("вечер=вече=1"))
+    }
+
+    @Test
+    fun `recordAnswer - wrong - decrements weight`(@TempDir tmp: Path) {
+        val write = tmp.resolve("questions.txt")
+        val service = FileService("/test-words.txt", write.toString())
+        service.postConstruct()
+
+        service.recordAnswer("вечер", correct = false)
+        service.recordAnswer("вечер", correct = false)
+
+        assertEquals(-2, service.wordWeights["вечер"])
+        assertTrue(Files.readString(write, StandardCharsets.UTF_8).contains("вечер=вече=-2"))
+    }
+
+    @Test
+    fun `recordAnswer - weight returns to zero - line drops weight suffix`(@TempDir tmp: Path) {
+        val write = tmp.resolve("questions.txt")
+        val service = FileService("/test-words.txt", write.toString())
+        service.postConstruct()
+
+        service.recordAnswer("вечер", correct = true)
+        service.recordAnswer("вечер", correct = false)
+
+        assertEquals(0, service.wordWeights["вечер"])
+        val written = Files.readString(write, StandardCharsets.UTF_8)
+        assertTrue(written.contains("вечер=вече\n"))
+        assertTrue(!written.contains("вечер=вече=0"))
+    }
+
+    @Test
+    fun `updateWord - existing word with weight - preserves weight in new line`(@TempDir tmp: Path) {
+        val write = tmp.resolve("questions.txt")
+        val service = FileService("/test-words.txt", write.toString())
+        service.postConstruct()
+        service.recordAnswer("вечер", correct = true)
+        service.recordAnswer("вечер", correct = true)
+
+        service.updateWord("вечер", "вечерок", "вече")
+
+        assertEquals(2, service.wordWeights["вечерок"])
+        assertTrue(Files.readString(write, StandardCharsets.UTF_8).contains("вечерок=вече=2"))
+    }
+
+    @Test
+    fun `recordAnswer - unknown word - throws`(@TempDir tmp: Path) {
+        val write = tmp.resolve("questions.txt")
+        val service = FileService("/test-words.txt", write.toString())
+        service.postConstruct()
+
+        assertThrows<IllegalArgumentException> {
+            service.recordAnswer("несуществующее", correct = true)
+        }
+    }
 }

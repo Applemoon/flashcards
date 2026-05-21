@@ -5,10 +5,14 @@
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
     <link rel="stylesheet" href="/style.css"/>
-    <script>
+    <script th:inline="javascript">
+        const WORD_RU = /*[[${wordRu}]]*/ '';
+
         function inputClick(input, translate) {
-            if (event.key === 'Enter' && input.value.toLowerCase() == translate.toLowerCase()) {
+            if (event.key === 'Enter' && input.value.toLowerCase() === translate.toLowerCase()) {
                 input.style.color = 'green';
+                fetch('/answer?word=' + encodeURIComponent(WORD_RU) + '&correct=true',
+                      { method: 'POST' });
                 setTimeout(function() { window.location.reload(); }, 700);
             }
         };

@@ -35,6 +35,7 @@ class QuizController(
         val pair = quizService.getTypeQuestion()
         model.addAttribute("word", pair.wordSrb)
         model.addAttribute("answer", pair.wordRu)
+        model.addAttribute("wordRu", pair.wordRu)
         return "type"
     }
 
@@ -43,6 +44,7 @@ class QuizController(
         val pair = quizService.getTypeQuestion()
         model.addAttribute("word", pair.wordRu)
         model.addAttribute("answer", pair.wordSrb)
+        model.addAttribute("wordRu", pair.wordRu)
         return "type"
     }
 
@@ -68,6 +70,15 @@ class QuizController(
         @RequestParam newSrb: String,
     ): ResponseEntity<Void> {
         fileService.addWord(newRu, newSrb)
+        return ResponseEntity.noContent().build()
+    }
+
+    @PostMapping("/answer")
+    fun recordAnswer(
+        @RequestParam word: String,
+        @RequestParam correct: Boolean,
+    ): ResponseEntity<Void> {
+        fileService.recordAnswer(word, correct)
         return ResponseEntity.noContent().build()
     }
 }

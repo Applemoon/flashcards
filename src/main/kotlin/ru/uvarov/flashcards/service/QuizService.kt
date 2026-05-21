@@ -5,6 +5,8 @@ import org.springframework.stereotype.Service
 import ru.uvarov.flashcards.model.Answer
 import ru.uvarov.flashcards.model.Question
 import ru.uvarov.flashcards.model.WordPair
+import kotlin.math.pow
+import kotlin.random.Random
 
 @Service
 class QuizService(
@@ -16,7 +18,7 @@ class QuizService(
         val wordPairs = fileService.wordPairs
         val wordsKeysRu = wordPairs.keys.toMutableList().apply { shuffle() }
 
-        val wordRu = wordsKeysRu.first()
+        val wordRu = pickWeighted(fileService.wordWeights)
         val translateSrb = wordPairs.getValue(wordRu)
 
         val answers = mutableListOf(Answer(translateSrb, wordRu, correct = true))
@@ -31,8 +33,21 @@ class QuizService(
 
     fun getTypeQuestion(): WordPair {
         val wordPairs = fileService.wordPairs
-        val wordRu = wordPairs.keys.random()
+        val wordRu = pickWeighted(fileService.wordWeights)
         return WordPair(wordRu, wordPairs.getValue(wordRu))
+    }
+
+    // Bias toward low/negative weight words. 0.7^weight: weight=-3 -> ~2.9x, 0 -> 1, +5 -> ~0.17, +10 -> ~0.028.
+    private fun pickWeighted(weights: Map<String, Int>): String {
+        require(weights.isNotEmpty()) { "Dictionary is empty" }
+        val scores = weights.mapValues { (_, w) -> 0.7.pow(w.toDouble()) }
+        val total = scores.values.sum()
+        var r = Random.nextDouble() * total
+        for ((word, score) in scores) {
+            r -= score
+            if (r <= 0.0) return word
+        }
+        return scores.keys.last()
     }
 
     private fun findAndFillStartingSameLetter(
