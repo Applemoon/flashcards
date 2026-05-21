@@ -5,8 +5,12 @@
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
     <link rel="stylesheet" href="/style.css"/>
-    <script>
+    <script th:inline="javascript">
+        const QUESTION_WORD = /*[[${question.word}]]*/ '';
+
         function btnClick(btn, answer) {
+            fetch('/answer?word=' + encodeURIComponent(QUESTION_WORD) + '&correct=' + answer.correct,
+                  { method: 'POST' });
             if (answer.correct) {
                 btn.style.color = 'green';
                 setTimeout(function() { window.location.reload(); }, 1000);
@@ -20,8 +24,8 @@
             if (!confirm("Удалить «" + word + "» из словаря?")) return;
             fetch('/word?word=' + encodeURIComponent(word), { method: 'DELETE' })
                 .then(function(response) {
-                    if (response.ok) window.location.reload();
-                    else alert("Не удалось удалить: " + response.status);
+                    if (response.ok) { window.location.reload(); return; }
+                    response.text().then(function(text) { alert("Не удалось удалить: " + (text || response.status)); });
                 });
         }
     </script>

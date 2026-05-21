@@ -12,10 +12,16 @@ private const val RUNS = 100
 
 class QuizServiceTest {
 
+    private fun mockFile(pairs: Map<String, String>, weights: Map<String, Int>? = null): FileService {
+        val fs = mock<FileService>()
+        whenever(fs.wordPairs).thenReturn(pairs)
+        whenever(fs.wordWeights).thenReturn(weights ?: pairs.keys.associateWith { 0 })
+        return fs
+    }
+
     @Test
     fun `getQuestion - dictionary larger than answers size - returns answers size options with one correct`() {
-        val fileService = mock<FileService>()
-        whenever(fileService.wordPairs).thenReturn(
+        val fileService = mockFile(
             mapOf(
                 "утром" to "ујутру",
                 "вечер" to "вече",
@@ -41,9 +47,7 @@ class QuizServiceTest {
             "ночь" to "ноћ",
             "полночь" to "поноћ",
         )
-        val fileService = mock<FileService>()
-        whenever(fileService.wordPairs).thenReturn(dict)
-        val service = QuizService(ANSWERS_SIZE, fileService)
+        val service = QuizService(ANSWERS_SIZE, mockFile(dict))
 
         repeat(RUNS) {
             val question = service.getQuestion()
@@ -62,9 +66,7 @@ class QuizServiceTest {
             "слово4" to "užina",
             "чужое" to "veče",
         )
-        val fileService = mock<FileService>()
-        whenever(fileService.wordPairs).thenReturn(dict)
-        val service = QuizService(ANSWERS_SIZE, fileService)
+        val service = QuizService(ANSWERS_SIZE, mockFile(dict))
 
         repeat(RUNS) {
             val question = service.getQuestion()
@@ -80,8 +82,7 @@ class QuizServiceTest {
 
     @Test
     fun `getQuestion - same letter pool insufficient - falls back to random`() {
-        val fileService = mock<FileService>()
-        whenever(fileService.wordPairs).thenReturn(
+        val fileService = mockFile(
             mapOf(
                 "слово1" to "ujutru",
                 "слово2" to "veče",
@@ -98,11 +99,31 @@ class QuizServiceTest {
     }
 
     @Test
+    fun `getQuestion - one word has strongly negative weight - is picked far more often`() {
+        val dict = (1..10).associate { "слово$it" to "perevod$it" }
+        val weights = dict.keys.associateWith { 0 }.toMutableMap()
+        weights["слово1"] = -8
+        val service = QuizService(ANSWERS_SIZE, mockFile(dict, weights))
+
+        val runs = 500
+        val counts = mutableMapOf<String, Int>()
+        repeat(runs) {
+            val q = service.getQuestion()
+            counts.merge(q.word, 1) { acc, _ -> acc + 1 }
+        }
+        // 0.7^-8 ≈ 17.5 vs 1 для остальных, доля «слово1» должна быть существенно выше 1/10.
+        val uniformShare = 1.0 / dict.size
+        val actualShare = (counts["слово1"] ?: 0).toDouble() / runs
+        assertTrue(
+            actualShare > uniformShare * 3,
+            "Слово с весом -8 должно появляться чаще равномерного в >3 раза, было $actualShare vs $uniformShare",
+        )
+    }
+
+    @Test
     fun `getTypeQuestion - any run - returns existing pair from dictionary`() {
         val dict = mapOf("утром" to "ујутру", "вечер" to "вече")
-        val fileService = mock<FileService>()
-        whenever(fileService.wordPairs).thenReturn(dict)
-        val service = QuizService(ANSWERS_SIZE, fileService)
+        val service = QuizService(ANSWERS_SIZE, mockFile(dict))
 
         repeat(RUNS) {
             val pair = service.getTypeQuestion()
