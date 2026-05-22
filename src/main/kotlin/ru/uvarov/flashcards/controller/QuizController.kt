@@ -25,7 +25,7 @@ class QuizController(
 
     @GetMapping("/words")
     fun words(model: Model): String {
-        model.addAttribute("allWords", quizService.getAllWords())
+        model.addAttribute("dictionaryLines", quizService.getDictionaryLines())
         model.addAttribute("wordCount", fileService.wordPairs.size)
         return "words"
     }

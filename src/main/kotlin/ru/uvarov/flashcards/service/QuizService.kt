@@ -3,6 +3,7 @@ package ru.uvarov.flashcards.service
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import ru.uvarov.flashcards.model.Answer
+import ru.uvarov.flashcards.model.DictionaryLine
 import ru.uvarov.flashcards.model.Question
 import ru.uvarov.flashcards.model.WordPair
 import kotlin.math.pow
@@ -29,7 +30,7 @@ class QuizService(
         return Question(wordRu, answers)
     }
 
-    fun getAllWords(): List<String> = fileService.fileContent
+    fun getDictionaryLines(): List<DictionaryLine> = fileService.getDictionaryLines()
 
     fun getTypeQuestion(): WordPair {
         val wordPairs = fileService.wordPairs
