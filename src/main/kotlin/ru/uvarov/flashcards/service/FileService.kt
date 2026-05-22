@@ -4,6 +4,7 @@ import jakarta.annotation.PostConstruct
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
+import ru.uvarov.flashcards.model.DictionaryLine
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
@@ -84,6 +85,8 @@ class FileService(
         log.debug("Recorded {} for '{}', weight now {}", if (correct) "correct" else "wrong", wordRu, newWeight)
     }
 
+    fun getDictionaryLines(): List<DictionaryLine> = parseDictionaryLines(fileContent)
+
     private fun validateNewPair(ru: String, srb: String) {
         require(ru.isNotEmpty()) { "newRu must not be blank" }
         require(srb.isNotEmpty()) { "newSrb must not be blank" }
@@ -133,6 +136,28 @@ class FileService(
 
         fun parseWordPairs(lines: List<String>): Map<String, String> =
             parseDictionary(lines).pairs
+
+        fun parseDictionaryLines(lines: List<String>): List<DictionaryLine> =
+            lines.map { raw ->
+                when {
+                    raw.isEmpty() -> DictionaryLine.Blank
+                    raw.startsWith("#") -> DictionaryLine.Heading(raw)
+                    else -> {
+                        val parts = raw.trim().split("=")
+                        require(parts.size in 2..3) { "Expected 1 or 2 '=' separators: $raw" }
+                        val weight = if (parts.size == 3) {
+                            val parsedWeight = parts[2].trim().toIntOrNull()
+                            require(parsedWeight != null) { "Invalid weight in line: $raw" }
+                            parsedWeight
+                        } else 0
+                        DictionaryLine.Word(
+                            ru = parts[0].trim(),
+                            srb = parts[1].trim(),
+                            weight = weight,
+                        )
+                    }
+                }
+            }
 
         fun formatLine(ru: String, srb: String, weight: Int): String =
             if (weight == 0) "$ru=$srb" else "$ru=$srb=$weight"

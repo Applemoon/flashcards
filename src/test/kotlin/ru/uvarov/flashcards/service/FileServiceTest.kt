@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.io.TempDir
+import ru.uvarov.flashcards.model.DictionaryLine
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
@@ -293,6 +294,26 @@ class FileServiceTest {
         assertThrows<IllegalArgumentException> {
             FileService.parseDictionary(listOf("а=б=1=2"))
         }
+    }
+
+    @Test
+    fun `parseDictionaryLines - weighted word - separates translation and weight`() {
+        val lines = FileService.parseDictionaryLines(
+            listOf(
+                "#Категория",
+                "",
+                "неделя=седмица, недеља=3",
+            )
+        )
+
+        assertEquals(
+            listOf(
+                DictionaryLine.Heading("#Категория"),
+                DictionaryLine.Blank,
+                DictionaryLine.Word("неделя", "седмица, недеља", 3),
+            ),
+            lines,
+        )
     }
 
     @Test

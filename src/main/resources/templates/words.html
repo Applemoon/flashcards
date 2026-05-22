@@ -152,20 +152,19 @@
                 </svg>
             </button>
         </div>
-        <th:block th:each="line: ${allWords}">
-            <div th:if="${line != '' and line.startsWith('#')}"
+        <th:block th:each="line: ${dictionaryLines}">
+            <div th:if="${line.kind == 'heading'}"
                  class="word heading"
-                 th:text="${line}"></div>
-            <div th:if="${line == ''}" class="word-spacer"></div>
-            <div th:if="${line != '' and !line.startsWith('#')}"
+                 th:text="${line.text}"></div>
+            <div th:if="${line.kind == 'blank'}" class="word-spacer"></div>
+            <div th:if="${line.kind == 'word'}"
                  class="word-row"
-                 th:with="key=${#strings.trim(#strings.substringBefore(line, '='))},val=${#strings.trim(#strings.substringAfter(line, '='))}"
-                 th:attr="data-key=${key},data-val=${val}">
+                 th:attr="data-key=${line.ru},data-val=${line.srb},data-weight=${line.weight}">
                 <input type="text" class="word-input" data-field="ru"
-                       th:value="${key}" onchange="onChange(this)"/>
+                       th:value="${line.ru}" onchange="onChange(this)"/>
                 <span class="word-eq">=</span>
                 <input type="text" class="word-input" data-field="srb"
-                       th:value="${val}" onchange="onChange(this)"/>
+                       th:value="${line.srb}" onchange="onChange(this)"/>
                 <button type="button" class="word-delete" title="Удалить" onclick="onDelete(this)">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                          stroke-linecap="round" aria-hidden="true">

@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
+import ru.uvarov.flashcards.model.DictionaryLine
 
 private const val ANSWERS_SIZE = 4
 private const val RUNS = 100
@@ -133,12 +134,15 @@ class QuizServiceTest {
     }
 
     @Test
-    fun `getAllWords - service returns content - proxies through`() {
-        val content = listOf("#Категория", "утром=ујутру")
+    fun `getDictionaryLines - service returns lines - proxies through`() {
+        val content = listOf(
+            DictionaryLine.Heading("#Категория"),
+            DictionaryLine.Word("утром", "ујутру", 0),
+        )
         val fileService = mock<FileService>()
-        whenever(fileService.fileContent).thenReturn(content)
+        whenever(fileService.getDictionaryLines()).thenReturn(content)
         val service = QuizService(ANSWERS_SIZE, fileService)
 
-        assertEquals(content, service.getAllWords())
+        assertEquals(content, service.getDictionaryLines())
     }
 }

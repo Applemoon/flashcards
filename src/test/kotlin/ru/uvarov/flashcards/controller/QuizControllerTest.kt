@@ -18,6 +18,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.model
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.view
 import ru.uvarov.flashcards.model.Answer
+import ru.uvarov.flashcards.model.DictionaryLine
 import ru.uvarov.flashcards.model.Question
 import ru.uvarov.flashcards.model.WordPair
 import ru.uvarov.flashcards.service.FileService
@@ -47,14 +48,18 @@ class QuizControllerTest {
     }
 
     @Test
-    fun `GET words - returns words view with all words and count`() {
-        whenever(quizService.getAllWords()).thenReturn(listOf("#Категория", "утром=ујутру"))
+    fun `GET words - returns words view with dictionary lines and count`() {
+        val lines = listOf(
+            DictionaryLine.Heading("#Категория"),
+            DictionaryLine.Word("утром", "ујутру", 0),
+        )
+        whenever(quizService.getDictionaryLines()).thenReturn(lines)
         whenever(fileService.wordPairs).thenReturn(mapOf("утром" to "ујутру"))
 
         mockMvc.perform(get("/words"))
             .andExpect(status().isOk)
             .andExpect(view().name("words"))
-            .andExpect(model().attribute("allWords", listOf("#Категория", "утром=ујутру")))
+            .andExpect(model().attribute("dictionaryLines", lines))
             .andExpect(model().attribute("wordCount", 1))
     }
 
