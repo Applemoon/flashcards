@@ -12,7 +12,11 @@
             fetch('/answer?word=' + encodeURIComponent(QUESTION_WORD) + '&correct=' + answer.correct,
                   { method: 'POST' });
             if (answer.correct) {
-                btn.style.color = 'green';
+                document.querySelectorAll('.answer-btn').forEach(function(answerBtn) {
+                    answerBtn.disabled = true;
+                });
+                btn.classList.add('answer-correct');
+                btn.textContent = btn.textContent + ' · Верно!';
                 setTimeout(function() { window.location.reload(); }, 1000);
             } else {
                 btn.style.color = 'red';
