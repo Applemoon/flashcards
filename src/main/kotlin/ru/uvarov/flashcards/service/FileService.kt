@@ -25,6 +25,9 @@ class FileService(
     final lateinit var wordWeights: Map<String, Int>
         private set
 
+    final lateinit var wordCategories: Map<String, String>
+        private set
+
     @PostConstruct
     fun postConstruct() {
         val input = checkNotNull(javaClass.getResourceAsStream(wordFilename)) {
@@ -34,6 +37,7 @@ class FileService(
         val parsed = parseDictionary(fileContent)
         wordPairs = parsed.pairs
         wordWeights = parsed.weights
+        wordCategories = parsed.categories
         log.info("Found {} words", wordPairs.size)
     }
 
@@ -104,11 +108,13 @@ class FileService(
         fileContent = newLines
         wordPairs = parsed.pairs
         wordWeights = parsed.weights
+        wordCategories = parsed.categories
     }
 
     data class ParsedDictionary(
         val pairs: Map<String, String>,
         val weights: Map<String, Int>,
+        val categories: Map<String, String>,
     )
 
     companion object {
@@ -117,8 +123,14 @@ class FileService(
         fun parseDictionary(lines: List<String>): ParsedDictionary {
             val pairs = mutableMapOf<String, String>()
             val weights = mutableMapOf<String, Int>()
+            val categories = mutableMapOf<String, String>()
+            var currentCategory = ""
             for (raw in lines) {
-                if (raw.isEmpty() || raw.startsWith("#")) continue
+                if (raw.isEmpty()) continue
+                if (raw.startsWith("#")) {
+                    currentCategory = raw.substring(1)
+                    continue
+                }
                 require(raw.contains("=")) { raw }
                 val parts = raw.trim().split("=")
                 require(parts.size in 2..3) { "Expected 1 or 2 '=' separators: $raw" }
@@ -130,8 +142,9 @@ class FileService(
                     require(w != null) { "Invalid weight in line: $raw" }
                     w
                 } else 0
+                categories[key] = currentCategory
             }
-            return ParsedDictionary(pairs, weights)
+            return ParsedDictionary(pairs, weights, categories)
         }
 
         fun parseWordPairs(lines: List<String>): Map<String, String> =

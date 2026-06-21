@@ -17,14 +17,29 @@ class QuizService(
 
     fun getQuestion(): Question {
         val wordPairs = fileService.wordPairs
-        val wordsKeysRu = wordPairs.keys.toMutableList().apply { shuffle() }
+        val categories = fileService.wordCategories
+        val types = wordPairs.mapValues { (_, srb) -> classify(srb) }
+        val keys = wordPairs.keys.shuffled()
 
         val wordRu = pickWeighted(fileService.wordWeights)
         val translateSrb = wordPairs.getValue(wordRu)
+        val targetType = types.getValue(wordRu)
+        val targetCategory = categories[wordRu]
+
+        // Внутри каждого тира слова на ту же букву, что и верный перевод, идут первыми.
+        // keys уже перемешаны, а sortedByDescending стабильна — случайность внутри групп сохраняется.
+        val firstLetter = translateSrb.firstOrNull()
+        val prioritized = keys.sortedByDescending {
+            firstLetter != null && wordPairs.getValue(it).startsWith(firstLetter)
+        }
 
         val answers = mutableListOf(Answer(translateSrb, wordRu, correct = true))
-        findAndFillStartingSameLetter(answers, wordsKeysRu, wordPairs, translateSrb)
-        fillIfNotEnough(answers, wordsKeysRu, wordPairs)
+        // Дистракторы добираются тремя тирами, от самого сильного к запасному:
+        // 1) та же категория и тот же тип записи (слово/фраза/предложение),
+        // 2) тот же тип в любой категории, 3) что угодно — лишь бы набрать answersSize.
+        fill(answers, prioritized, wordPairs) { ru -> categories[ru] == targetCategory && types.getValue(ru) == targetType }
+        fill(answers, prioritized, wordPairs) { ru -> types.getValue(ru) == targetType }
+        fill(answers, prioritized, wordPairs) { true }
         answers.shuffle()
 
         return Question(wordRu, answers)
@@ -51,33 +66,36 @@ class QuizService(
         return scores.keys.last()
     }
 
-    private fun findAndFillStartingSameLetter(
+    // Добавляет дистракторы, проходящие accept, пока не наберётся answersSize.
+    // Дубликаты (в т.ч. совпавший правильный ответ) отсеиваются через Answer.equals.
+    private fun fill(
         answers: MutableList<Answer>,
-        wordsKeysRu: List<String>,
+        keys: List<String>,
         wordPairs: Map<String, String>,
-        translateSrb: String,
+        accept: (String) -> Boolean,
     ) {
-        val firstLetter = translateSrb.substring(0, 1)
-        for (currentWordRu in wordsKeysRu) {
+        for (ru in keys) {
             if (answers.size >= answersSize) return
-            val currentAnswerSrb = wordPairs.getValue(currentWordRu)
-            if (currentAnswerSrb != translateSrb && currentAnswerSrb.startsWith(firstLetter)) {
-                answers += Answer(currentAnswerSrb, currentWordRu, correct = false)
-            }
-        }
-    }
-
-    private fun fillIfNotEnough(
-        answers: MutableList<Answer>,
-        wordsKeysRu: List<String>,
-        wordPairs: Map<String, String>,
-    ) {
-        for (answerRu in wordsKeysRu) {
-            if (answers.size >= answersSize) return
-            val candidate = Answer(wordPairs.getValue(answerRu), answerRu, correct = false)
+            if (!accept(ru)) continue
+            val candidate = Answer(wordPairs.getValue(ru), ru, correct = false)
             if (candidate !in answers) {
                 answers += candidate
             }
         }
     }
+
+    // Тип записи по сербской стороне (то, что видно как вариант ответа): одиночное слово,
+    // короткая фраза или предложение. Удерживает квиз от смешивания «мачка» с «боли ме глава.».
+    private fun classify(srb: String): WordType {
+        val s = srb.trim()
+        if (s.endsWith(".") || s.endsWith("?")) return WordType.SENTENCE
+        val tokens = s.split(Regex("[ ,]+")).filter { it.isNotBlank() }
+        return when {
+            tokens.size >= 4 -> WordType.SENTENCE
+            tokens.size >= 2 -> WordType.PHRASE
+            else -> WordType.WORD
+        }
+    }
+
+    private enum class WordType { WORD, PHRASE, SENTENCE }
 }

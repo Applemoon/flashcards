@@ -283,6 +283,46 @@ class FileServiceTest {
     }
 
     @Test
+    fun `parseDictionary - words under headings - assigns category from preceding heading`() {
+        val parsed = FileService.parseDictionary(
+            listOf(
+                "#Категория один",
+                "утром=ујутру",
+                "вечер=вече",
+                "",
+                "#Категория два",
+                "неделя=седмица, недеља",
+            )
+        )
+
+        assertEquals(
+            mapOf(
+                "утром" to "Категория один",
+                "вечер" to "Категория один",
+                "неделя" to "Категория два",
+            ),
+            parsed.categories,
+        )
+    }
+
+    @Test
+    fun `parseDictionary - word before any heading - gets empty category`() {
+        val parsed = FileService.parseDictionary(listOf("сирота=сироче"))
+
+        assertEquals(mapOf("сирота" to ""), parsed.categories)
+    }
+
+    @Test
+    fun `postConstruct - loads classpath resource - populates categories`() {
+        val service = FileService("/test-words.txt", "/tmp/unused-write.txt")
+
+        service.postConstruct()
+
+        assertEquals("Категория один", service.wordCategories["утром"])
+        assertEquals("Категория два", service.wordCategories["неделя"])
+    }
+
+    @Test
     fun `parseDictionary - invalid weight format - throws`() {
         assertThrows<IllegalArgumentException> {
             FileService.parseDictionary(listOf("утром=ујутру=абв"))
