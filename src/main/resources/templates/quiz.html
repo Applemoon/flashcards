@@ -34,11 +34,45 @@
 
         document.addEventListener('DOMContentLoaded', function() { renderCombo(readCombo()); });
 
+        // Звуки синтезируются Web Audio API, файлов нет. AudioContext создаётся на первом клике —
+        // до жеста пользователя браузер звук не пустит.
+        let audioCtx = null;
+
+        function tone(freq, start, duration, type, volume, endFreq) {
+            const t = audioCtx.currentTime + start;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, t);
+            if (endFreq) osc.frequency.exponentialRampToValueAtTime(endFreq, t + duration);
+            gain.gain.setValueAtTime(0.0001, t);
+            gain.gain.exponentialRampToValueAtTime(volume, t + 0.01);
+            gain.gain.exponentialRampToValueAtTime(0.0001, t + duration);
+            osc.connect(gain).connect(audioCtx.destination);
+            osc.start(t);
+            osc.stop(t + duration + 0.02);
+        }
+
+        function playSound(correct, combo) {
+            try {
+                audioCtx = audioCtx || new AudioContext();
+                if (correct) {
+                    // Каждый шаг комбо поднимает перезвон на полтона, потолок — октава.
+                    const base = 660 * Math.pow(2, Math.min(combo, 12) / 12);
+                    tone(base, 0, 0.15, 'triangle', 0.25);
+                    tone(base * 1.5, 0.09, 0.3, 'triangle', 0.25);
+                } else {
+                    tone(180, 0, 0.25, 'square', 0.06, 90);
+                }
+            } catch (e) {}
+        }
+
         function btnClick(btn, answer) {
             fetch('/answer?word=' + encodeURIComponent(QUESTION_WORD) + '&correct=' + answer.correct,
                   { method: 'POST' });
             if (answer.correct) {
                 if (!missed) setCombo(readCombo() + 1, 'combo-bump');
+                playSound(true, readCombo());
                 document.querySelectorAll('.answer-btn').forEach(function(answerBtn) {
                     answerBtn.disabled = true;
                 });
@@ -48,6 +82,7 @@
             } else {
                 missed = true;
                 if (readCombo() > 0) setCombo(0, 'combo-reset');
+                playSound(false);
                 btn.style.color = 'red';
                 btn.textContent = btn.textContent + " - " + btn.title;
                 btn.disabled = true;
