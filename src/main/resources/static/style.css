@@ -91,10 +91,51 @@ body {
 .card {
     background: var(--surface);
     border-radius: var(--radius);
-    padding: 44px 28px 36px;
+    padding: 24px 28px 36px;
     box-shadow: var(--shadow-lg);
     border: 1px solid var(--border);
     text-align: center;
+}
+
+.combo {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 999px;
+    color: var(--muted);
+    font-size: 0.95rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.combo svg {
+    width: 16px;
+    height: 16px;
+}
+
+.combo.combo-active {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: var(--accent-soft);
+}
+
+.combo.combo-bump { animation: combo-bump 0.45s cubic-bezier(0.2, 1.7, 0.35, 1); }
+
+.combo.combo-reset { animation: combo-shake 0.35s ease; }
+
+@keyframes combo-bump {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.25); }
+    100% { transform: scale(1); }
+}
+
+@keyframes combo-shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
 }
 
 .prompt {
@@ -193,51 +234,6 @@ body {
         opacity: 0;
         transform: translate(-50%, -50%) scale(1.9);
     }
-}
-
-.type-card {
-    background: var(--surface);
-    border-radius: var(--radius);
-    padding: 44px 32px 36px;
-    box-shadow: var(--shadow-lg);
-    border: 1px solid var(--border);
-}
-
-.type-prompt {
-    font-size: clamp(1.8rem, 5vw, 2.6rem);
-    font-weight: 700;
-    margin: 0 0 28px;
-    letter-spacing: -0.02em;
-    text-align: center;
-    cursor: help;
-}
-
-.type-label {
-    display: block;
-    margin: 0 0 10px;
-    color: var(--muted);
-    font-size: 0.9rem;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    font-weight: 600;
-}
-
-.type-input {
-    width: 100%;
-    padding: 16px 20px;
-    font-size: 1.2rem;
-    border: 2px solid var(--border);
-    border-radius: var(--radius-sm);
-    background: var(--surface);
-    color: var(--text);
-    font-family: inherit;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.type-input:focus {
-    outline: none;
-    border-color: var(--accent);
-    box-shadow: 0 0 0 4px var(--accent-soft);
 }
 
 .skip-actions {
@@ -422,51 +418,4 @@ body {
     width: 16px;
     height: 16px;
     display: block;
-}
-
-/* Index / landing menu */
-.hero {
-    text-align: center;
-    margin: 48px 0 36px;
-}
-
-.hero h1 {
-    font-size: clamp(2rem, 6vw, 2.8rem);
-    font-weight: 800;
-    margin: 0 0 8px;
-    letter-spacing: -0.03em;
-}
-
-.hero p {
-    margin: 0;
-    color: var(--muted);
-    font-size: 1.05rem;
-}
-
-.menu {
-    display: grid;
-    gap: 14px;
-    max-width: 420px;
-    margin: 0 auto;
-}
-
-.menu a {
-    display: block;
-    padding: 20px 24px;
-    background: var(--surface);
-    color: var(--text);
-    text-decoration: none;
-    border-radius: var(--radius);
-    font-size: 1.1rem;
-    font-weight: 600;
-    box-shadow: var(--shadow);
-    border: 1px solid var(--border);
-    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
-    text-align: center;
-}
-
-.menu a:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
-    border-color: var(--accent);
 }

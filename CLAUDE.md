@@ -31,18 +31,16 @@ Toolchain в `build.gradle.kts` запрашивает JDK 21 — Gradle ище�
 
 1. `FileService` при `@PostConstruct` читает `src/main/resources/questions.txt` через classpath (`getResourceAsStream`), парсит в `Map<String, String> wordPairs` (rus → srb) и хранит весь список строк в `fileContent`. Файл загружается **один раз** на старте — изменения в `questions.txt` без перезапуска приложения не подхватятся.
 2. `QuizService` берёт `wordPairs` из `FileService` и строит вопросы.
-3. `QuizController` рендерит Thymeleaf-шаблоны (`quiz.html`, `words.html`, `type.html`).
+3. `QuizController` рендерит Thymeleaf-шаблоны (`quiz.html`, `words.html`).
 
 **Endpoints:**
 
-- `GET /` → `static/index.html` — меню режимов.
-- `GET /quiz` — multiple-choice (4 варианта): по русскому слову выбрать сербский перевод.
+- `GET /`, `GET /quiz` — multiple-choice (4 варианта): по русскому слову выбрать сербский перевод. Отдельного меню нет, приложение сразу открывается на квизе. Сверху счётчик комбо (правильных ответов подряд): живёт в `sessionStorage` на клиенте, т.к. страница перезагружается на каждый вопрос; неверный клик и «Пропустить» обнуляют его (после неверного клика вопрос уже не засчитывается); «Удалить» комбо не трогает.
 - `GET /words` — редактируемый список словаря: пары рендерятся как два `<input>` (ru, srb) с ×-кнопкой; `#`-заголовки и пустые строки сохраняются как визуальные разделители. Счётчик `wordCount` сверху = `wordPairs.size`. Изменения уходят через `PUT /word` на `change`-эвент инпута, удаление — через `DELETE /word`.
-- `GET /type-srb-ru`, `GET /type-ru-srb` — режим ввода с клавиатуры, направление меняется.
 - `DELETE /word?word=...` — удаляет пару по русскому ключу. Дёргают `quiz.html` (кнопка «Знаю — удалить») и `words.html` (×). `FileService.deleteWord` убирает пару из in-memory и перезаписывает `questions.txt` через `quiz.word-write-filename`.
 - `PUT /word?oldRu=...&newRu=...&newSrb=...` — обновляет пару. `FileService.updateWord` валидирует blank/«=»/«#»/коллизию ключей, заменяет совпадающую строку в `fileContent` на `newRu=newSrb` (нормализует пробелы вокруг `=`), перезаписывает файл.
 - `POST /word?newRu=...&newSrb=...` — добавляет пару. `FileService.addWord` валидирует через тот же `validateNewPair` + проверку дубликата, аппендит `newRu=newSrb` в конец `fileContent`, перезаписывает файл. Фронтенд (`words.html`, ghost-row сверху списка) на успех динамически вставляет ряд в конец `.words-list` и инкрементит счётчик, без перезагрузки.
-- `POST /answer?word=<ru>&correct=<bool>` — фиксирует ответ на квиз/type. `FileService.recordAnswer` меняет вес слова на ±1 и перезаписывает строку в `questions.txt`. Дёргают `quiz.html` (на каждый клик: correct=true/false) и `type.html` (только на правильный ввод по Enter).
+- `POST /answer?word=<ru>&correct=<bool>` — фиксирует ответ на квиз. `FileService.recordAnswer` меняет вес слова на ±1 и перезаписывает строку в `questions.txt`. Дёргает `quiz.html` на каждый клик (correct=true/false).
 
 **Формат словаря (`src/main/resources/questions.txt`):**
 
@@ -70,7 +68,7 @@ Toolchain в `build.gradle.kts` запрашивает JDK 21 — Gradle ище�
 
 ## Соглашения по коду
 
-- Kotlin `data class` для DTO (`WordPair`, `Answer`, `Question`). `Pair` намеренно переименован в `WordPair`, чтобы не конфликтовать с `kotlin.Pair`.
+- Kotlin `data class` для DTO (`Answer`, `Question`).
 - Lombok не используется — стандартные средства Kotlin (data class, primary constructor) закрывают потребность.
 - Логгер — через `org.slf4j.LoggerFactory.getLogger(...)` в companion object или top-level `private val`.
 - Spring требует `kotlin("plugin.spring")` (открывает `@Component`/`@Controller`/`@Service` для proxying) и `kotlin-reflect` — оба уже подключены.

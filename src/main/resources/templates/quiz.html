@@ -7,11 +7,38 @@
     <link rel="stylesheet" href="/style.css"/>
     <script th:inline="javascript">
         const QUESTION_WORD = /*[[${question.word}]]*/ '';
+        // Страница перезагружается на каждый вопрос, поэтому комбо живёт в sessionStorage.
+        const COMBO_KEY = 'combo';
+        // Вопрос, на котором уже ошиблись, комбо не наращивает, даже если потом выбрать верный ответ.
+        let missed = false;
+
+        function readCombo() {
+            try { return parseInt(sessionStorage.getItem(COMBO_KEY), 10) || 0; } catch (e) { return 0; }
+        }
+
+        function setCombo(value, animation) {
+            try { sessionStorage.setItem(COMBO_KEY, String(value)); } catch (e) {}
+            renderCombo(value);
+            if (!animation) return;
+            const combo = document.getElementById('combo');
+            combo.classList.remove('combo-bump', 'combo-reset');
+            void combo.offsetWidth; // перезапуск CSS-анимации
+            combo.classList.add(animation);
+        }
+
+        function renderCombo(value) {
+            const combo = document.getElementById('combo');
+            combo.querySelector('.combo-value').textContent = value;
+            combo.classList.toggle('combo-active', value > 0);
+        }
+
+        document.addEventListener('DOMContentLoaded', function() { renderCombo(readCombo()); });
 
         function btnClick(btn, answer) {
             fetch('/answer?word=' + encodeURIComponent(QUESTION_WORD) + '&correct=' + answer.correct,
                   { method: 'POST' });
             if (answer.correct) {
+                if (!missed) setCombo(readCombo() + 1, 'combo-bump');
                 document.querySelectorAll('.answer-btn').forEach(function(answerBtn) {
                     answerBtn.disabled = true;
                 });
@@ -19,10 +46,16 @@
                 btn.textContent = btn.textContent + ' · Верно!';
                 setTimeout(function() { window.location.reload(); }, 1000);
             } else {
+                missed = true;
+                if (readCombo() > 0) setCombo(0, 'combo-reset');
                 btn.style.color = 'red';
                 btn.textContent = btn.textContent + " - " + btn.title;
                 btn.disabled = true;
             }
+        }
+        function skip() {
+            setCombo(0);
+            window.location.reload();
         }
         function deleteWord(word) {
             if (!confirm("Удалить «" + word + "» из словаря?")) return;
@@ -37,13 +70,17 @@
 <body>
 <div class="container">
     <nav class="nav">
-        <a href="/">Меню</a>
-        <a href="/quiz">Quiz</a>
-        <a href="/type-srb-ru">Srb → Ru</a>
-        <a href="/type-ru-srb">Ru → Srb</a>
+        <a href="/">Quiz</a>
         <a href="/words">Слова</a>
     </nav>
     <main class="card">
+        <div class="combo" id="combo" title="Правильных ответов подряд">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>
+            </svg>
+            Комбо: <span class="combo-value">0</span>
+        </div>
         <h1 class="prompt" th:text="${question.word}">Слово</h1>
         <div class="answers">
             <button th:each="answer: ${question.answersList}"
@@ -54,7 +91,7 @@
             </button>
         </div>
         <div class="skip-actions">
-            <button type="button" class="skip-btn" onclick="window.location.reload()">
+            <button type="button" class="skip-btn" onclick="skip()">
                 <svg class="icon-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <path d="M3 12a9 9 0 0 1 15-6.7L21 8"/>

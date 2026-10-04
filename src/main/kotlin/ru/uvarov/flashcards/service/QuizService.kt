@@ -5,7 +5,6 @@ import org.springframework.stereotype.Service
 import ru.uvarov.flashcards.model.Answer
 import ru.uvarov.flashcards.model.DictionaryLine
 import ru.uvarov.flashcards.model.Question
-import ru.uvarov.flashcards.model.WordPair
 import kotlin.math.pow
 import kotlin.random.Random
 
@@ -46,12 +45,6 @@ class QuizService(
     }
 
     fun getDictionaryLines(): List<DictionaryLine> = fileService.getDictionaryLines()
-
-    fun getTypeQuestion(): WordPair {
-        val wordPairs = fileService.wordPairs
-        val wordRu = pickWeighted(fileService.wordWeights)
-        return WordPair(wordRu, wordPairs.getValue(wordRu))
-    }
 
     // Bias toward low/negative weight words. 0.7^weight: weight=-3 -> ~2.9x, 0 -> 1, +5 -> ~0.17, +10 -> ~0.028.
     private fun pickWeighted(weights: Map<String, Int>): String {

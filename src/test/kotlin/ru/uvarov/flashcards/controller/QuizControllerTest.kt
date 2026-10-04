@@ -20,7 +20,6 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.view
 import ru.uvarov.flashcards.model.Answer
 import ru.uvarov.flashcards.model.DictionaryLine
 import ru.uvarov.flashcards.model.Question
-import ru.uvarov.flashcards.model.WordPair
 import ru.uvarov.flashcards.service.FileService
 import ru.uvarov.flashcards.service.QuizService
 
@@ -48,6 +47,17 @@ class QuizControllerTest {
     }
 
     @Test
+    fun `GET root - returns quiz view without separate menu`() {
+        val question = Question("утром", listOf(Answer("ујутру", "утром", correct = true)))
+        whenever(quizService.getQuestion()).thenReturn(question)
+
+        mockMvc.perform(get("/"))
+            .andExpect(status().isOk)
+            .andExpect(view().name("quiz"))
+            .andExpect(model().attribute("question", question))
+    }
+
+    @Test
     fun `GET words - returns words view with dictionary lines and count`() {
         val lines = listOf(
             DictionaryLine.Heading("#Категория"),
@@ -61,30 +71,6 @@ class QuizControllerTest {
             .andExpect(view().name("words"))
             .andExpect(model().attribute("dictionaryLines", lines))
             .andExpect(model().attribute("wordCount", 1))
-    }
-
-    @Test
-    fun `GET type-srb-ru - exposes srb as word and ru as answer and wordRu`() {
-        whenever(quizService.getTypeQuestion()).thenReturn(WordPair("утром", "ујутру"))
-
-        mockMvc.perform(get("/type-srb-ru"))
-            .andExpect(status().isOk)
-            .andExpect(view().name("type"))
-            .andExpect(model().attribute("word", "ујутру"))
-            .andExpect(model().attribute("answer", "утром"))
-            .andExpect(model().attribute("wordRu", "утром"))
-    }
-
-    @Test
-    fun `GET type-ru-srb - exposes ru as word answer is srb wordRu is ru`() {
-        whenever(quizService.getTypeQuestion()).thenReturn(WordPair("утром", "ујутру"))
-
-        mockMvc.perform(get("/type-ru-srb"))
-            .andExpect(status().isOk)
-            .andExpect(view().name("type"))
-            .andExpect(model().attribute("word", "утром"))
-            .andExpect(model().attribute("answer", "ујутру"))
-            .andExpect(model().attribute("wordRu", "утром"))
     }
 
     @Test

@@ -1,7 +1,6 @@
 package ru.uvarov.flashcards.service
 
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock
@@ -166,18 +165,6 @@ class QuizServiceTest {
             actualShare > uniformShare * 3,
             "Слово с весом -8 должно появляться чаще равномерного в >3 раза, было $actualShare vs $uniformShare",
         )
-    }
-
-    @Test
-    fun `getTypeQuestion - any run - returns existing pair from dictionary`() {
-        val dict = mapOf("утром" to "ујутру", "вечер" to "вече")
-        val service = QuizService(ANSWERS_SIZE, mockFile(dict))
-
-        repeat(RUNS) {
-            val pair = service.getTypeQuestion()
-            assertNotNull(pair.wordRu)
-            assertEquals(dict[pair.wordRu], pair.wordSrb)
-        }
     }
 
     @Test

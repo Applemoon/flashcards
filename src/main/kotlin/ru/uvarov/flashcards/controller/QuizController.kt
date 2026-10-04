@@ -17,7 +17,7 @@ class QuizController(
     private val fileService: FileService,
 ) {
 
-    @GetMapping("/quiz")
+    @GetMapping("/", "/quiz")
     fun quiz(model: Model): String {
         model.addAttribute("question", quizService.getQuestion())
         return "quiz"
@@ -28,24 +28,6 @@ class QuizController(
         model.addAttribute("dictionaryLines", quizService.getDictionaryLines())
         model.addAttribute("wordCount", fileService.wordPairs.size)
         return "words"
-    }
-
-    @GetMapping("/type-srb-ru")
-    fun typeSrbRu(model: Model): String {
-        val pair = quizService.getTypeQuestion()
-        model.addAttribute("word", pair.wordSrb)
-        model.addAttribute("answer", pair.wordRu)
-        model.addAttribute("wordRu", pair.wordRu)
-        return "type"
-    }
-
-    @GetMapping("/type-ru-srb")
-    fun typeRuSrb(model: Model): String {
-        val pair = quizService.getTypeQuestion()
-        model.addAttribute("word", pair.wordRu)
-        model.addAttribute("answer", pair.wordSrb)
-        model.addAttribute("wordRu", pair.wordRu)
-        return "type"
     }
 
     @DeleteMapping("/word")
