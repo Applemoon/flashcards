@@ -11,6 +11,7 @@ sealed interface DictionaryLine {
         override val kind: String = "word"
     }
 
+    // Заголовок категории без ведущего «#».
     data class Heading(
         val text: String,
     ) : DictionaryLine {

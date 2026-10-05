@@ -14,6 +14,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.content
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.model
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.view
@@ -58,9 +59,23 @@ class QuizControllerTest {
     }
 
     @Test
+    fun `GET question - returns question as json`() {
+        val question = Question("утром", listOf(Answer("ујутру", "утром", correct = true)), retry = true)
+        whenever(quizService.getQuestion()).thenReturn(question)
+
+        mockMvc.perform(get("/question"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.word").value("утром"))
+            .andExpect(jsonPath("$.retry").value(true))
+            .andExpect(jsonPath("$.answersList[0].word").value("ујутру"))
+            .andExpect(jsonPath("$.answersList[0].translate").value("утром"))
+            .andExpect(jsonPath("$.answersList[0].correct").value(true))
+    }
+
+    @Test
     fun `GET words - returns words view with dictionary lines and count`() {
         val lines = listOf(
-            DictionaryLine.Heading("#Категория"),
+            DictionaryLine.Heading("Категория"),
             DictionaryLine.Word("утром", "ујутру", 0),
         )
         whenever(quizService.getDictionaryLines()).thenReturn(lines)
@@ -112,7 +127,7 @@ class QuizControllerTest {
                 .param("correct", "true")
         ).andExpect(status().isNoContent)
 
-        verify(fileService).recordAnswer("утром", true)
+        verify(quizService).recordAnswer("утром", true)
     }
 
     @Test
@@ -123,7 +138,7 @@ class QuizControllerTest {
                 .param("correct", "false")
         ).andExpect(status().isNoContent)
 
-        verify(fileService).recordAnswer("утром", false)
+        verify(quizService).recordAnswer("утром", false)
     }
 
     @Test

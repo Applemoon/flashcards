@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.bind.annotation.ResponseBody
+import ru.uvarov.flashcards.model.Question
 import ru.uvarov.flashcards.service.FileService
 import ru.uvarov.flashcards.service.QuizService
 
@@ -22,6 +24,11 @@ class QuizController(
         model.addAttribute("question", quizService.getQuestion())
         return "quiz"
     }
+
+    // Следующий вопрос для quiz.html без перезагрузки страницы.
+    @GetMapping("/question")
+    @ResponseBody
+    fun question(): Question = quizService.getQuestion()
 
     @GetMapping("/words")
     fun words(model: Model): String {
@@ -60,7 +67,7 @@ class QuizController(
         @RequestParam word: String,
         @RequestParam correct: Boolean,
     ): ResponseEntity<Void> {
-        fileService.recordAnswer(word, correct)
+        quizService.recordAnswer(word, correct)
         return ResponseEntity.noContent().build()
     }
 }

@@ -125,52 +125,39 @@ class FileService(
             val weights = mutableMapOf<String, Int>()
             val categories = mutableMapOf<String, String>()
             var currentCategory = ""
-            for (raw in lines) {
-                if (raw.isEmpty()) continue
-                if (raw.startsWith("#")) {
-                    currentCategory = raw.substring(1)
-                    continue
+            for (line in parseDictionaryLines(lines)) {
+                when (line) {
+                    is DictionaryLine.Heading -> currentCategory = line.text
+                    is DictionaryLine.Word -> {
+                        check(line.ru !in pairs) { "Duplicate Russian key: ${line.ru}" }
+                        pairs[line.ru] = line.srb
+                        weights[line.ru] = line.weight
+                        categories[line.ru] = currentCategory
+                    }
+                    DictionaryLine.Blank -> {}
                 }
-                require(raw.contains("=")) { raw }
-                val parts = raw.trim().split("=")
-                require(parts.size in 2..3) { "Expected 1 or 2 '=' separators: $raw" }
-                val key = parts[0].trim()
-                check(key !in pairs) { "Duplicate Russian key: $key" }
-                pairs[key] = parts[1].trim()
-                weights[key] = if (parts.size == 3) {
-                    val w = parts[2].trim().toIntOrNull()
-                    require(w != null) { "Invalid weight in line: $raw" }
-                    w
-                } else 0
-                categories[key] = currentCategory
             }
             return ParsedDictionary(pairs, weights, categories)
         }
-
-        fun parseWordPairs(lines: List<String>): Map<String, String> =
-            parseDictionary(lines).pairs
 
         fun parseDictionaryLines(lines: List<String>): List<DictionaryLine> =
             lines.map { raw ->
                 when {
                     raw.isEmpty() -> DictionaryLine.Blank
-                    raw.startsWith("#") -> DictionaryLine.Heading(raw)
-                    else -> {
-                        val parts = raw.trim().split("=")
-                        require(parts.size in 2..3) { "Expected 1 or 2 '=' separators: $raw" }
-                        val weight = if (parts.size == 3) {
-                            val parsedWeight = parts[2].trim().toIntOrNull()
-                            require(parsedWeight != null) { "Invalid weight in line: $raw" }
-                            parsedWeight
-                        } else 0
-                        DictionaryLine.Word(
-                            ru = parts[0].trim(),
-                            srb = parts[1].trim(),
-                            weight = weight,
-                        )
-                    }
+                    raw.startsWith("#") -> DictionaryLine.Heading(raw.removePrefix("#"))
+                    else -> parseWordLine(raw)
                 }
             }
+
+        private fun parseWordLine(raw: String): DictionaryLine.Word {
+            require(raw.contains("=")) { raw }
+            val parts = raw.trim().split("=")
+            require(parts.size in 2..3) { "Expected 1 or 2 '=' separators: $raw" }
+            val weight = if (parts.size == 3) {
+                requireNotNull(parts[2].trim().toIntOrNull()) { "Invalid weight in line: $raw" }
+            } else 0
+            return DictionaryLine.Word(ru = parts[0].trim(), srb = parts[1].trim(), weight = weight)
+        }
 
         fun formatLine(ru: String, srb: String, weight: Int): String =
             if (weight == 0) "$ru=$srb" else "$ru=$srb=$weight"

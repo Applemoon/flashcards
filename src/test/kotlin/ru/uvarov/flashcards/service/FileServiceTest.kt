@@ -14,56 +14,56 @@ import java.nio.file.Path
 class FileServiceTest {
 
     @Test
-    fun `parseWordPairs - valid lines - returns map`() {
-        val result = FileService.parseWordPairs(
+    fun `parseDictionary - valid lines - returns map`() {
+        val result = FileService.parseDictionary(
             listOf(
                 "утром=ујутру",
                 "вечер=вече",
             )
-        )
+        ).pairs
 
         assertEquals(mapOf("утром" to "ујутру", "вечер" to "вече"), result)
     }
 
     @Test
-    fun `parseWordPairs - comment and empty lines - are skipped`() {
-        val result = FileService.parseWordPairs(
+    fun `parseDictionary - comment and empty lines - are skipped`() {
+        val result = FileService.parseDictionary(
             listOf(
                 "#Категория",
                 "",
                 "утром=ујутру",
             )
-        )
+        ).pairs
 
         assertEquals(mapOf("утром" to "ујутру"), result)
     }
 
     @Test
-    fun `parseWordPairs - multiple translations - kept as single string`() {
-        val result = FileService.parseWordPairs(listOf("неделя=седмица, недеља"))
+    fun `parseDictionary - multiple translations - kept as single string`() {
+        val result = FileService.parseDictionary(listOf("неделя=седмица, недеља")).pairs
 
         assertEquals("седмица, недеља", result["неделя"])
     }
 
     @Test
-    fun `parseWordPairs - whitespace around equals - is trimmed`() {
-        val result = FileService.parseWordPairs(listOf("  утром  =  ујутру  "))
+    fun `parseDictionary - whitespace around equals - is trimmed`() {
+        val result = FileService.parseDictionary(listOf("  утром  =  ујутру  ")).pairs
 
         assertEquals(mapOf("утром" to "ујутру"), result)
     }
 
     @Test
-    fun `parseWordPairs - line without equals - throws`() {
+    fun `parseDictionary - line without equals - throws`() {
         val ex = assertThrows<IllegalArgumentException> {
-            FileService.parseWordPairs(listOf("сломанная строка"))
+            FileService.parseDictionary(listOf("сломанная строка"))
         }
         assertEquals("сломанная строка", ex.message)
     }
 
     @Test
-    fun `parseWordPairs - duplicate russian key - throws`() {
+    fun `parseDictionary - duplicate russian key - throws`() {
         assertThrows<IllegalStateException> {
-            FileService.parseWordPairs(
+            FileService.parseDictionary(
                 listOf(
                     "утром=ујутру",
                     "утром=другой перевод",
@@ -348,7 +348,7 @@ class FileServiceTest {
 
         assertEquals(
             listOf(
-                DictionaryLine.Heading("#Категория"),
+                DictionaryLine.Heading("Категория"),
                 DictionaryLine.Blank,
                 DictionaryLine.Word("неделя", "седмица, недеља", 3),
             ),

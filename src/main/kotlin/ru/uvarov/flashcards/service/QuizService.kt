@@ -11,16 +11,26 @@ import kotlin.random.Random
 @Service
 class QuizService(
     @Value("\${quiz.answer-size}") private val answersSize: Int,
+    @Value("\${quiz.retry-after}") private val retryAfter: Int,
     private val fileService: FileService,
 ) {
 
+    // Слово с ошибкой → сколько вопросов осталось до повтора. Живёт в памяти: после перезапуска
+    // очередь пуста, но вес ошибки уже записан в файл.
+    private val retryQueue = LinkedHashMap<String, Int>()
+
+    // Слово, выданное повтором: верный ответ на него вес не поднимает, иначе ошибка снова стирается.
+    private var currentRetry: String? = null
+
+    @Synchronized
     fun getQuestion(): Question {
         val wordPairs = fileService.wordPairs
         val categories = fileService.wordCategories
         val types = wordPairs.mapValues { (_, srb) -> classify(srb) }
         val keys = wordPairs.keys.shuffled()
 
-        val wordRu = pickWeighted(fileService.wordWeights)
+        currentRetry = nextRetry(wordPairs.keys)
+        val wordRu = currentRetry ?: pickWeighted(fileService.wordWeights)
         val translateSrb = wordPairs.getValue(wordRu)
         val targetType = types.getValue(wordRu)
         val targetCategory = categories[wordRu]
@@ -41,7 +51,25 @@ class QuizService(
         fill(answers, prioritized, wordPairs) { true }
         answers.shuffle()
 
-        return Question(wordRu, answers)
+        return Question(wordRu, answers, retry = currentRetry != null)
+    }
+
+    // Один ответ на вопрос: фронтенд шлёт только первый клик.
+    @Synchronized
+    fun recordAnswer(wordRu: String, correct: Boolean) {
+        val wasRetry = wordRu == currentRetry
+        currentRetry = null
+        if (correct && wasRetry) return
+        fileService.recordAnswer(wordRu, correct)
+        if (!correct) retryQueue[wordRu] = retryAfter
+    }
+
+    private fun nextRetry(knownWords: Set<String>): String? {
+        retryQueue.keys.retainAll(knownWords) // удалённые и переименованные слова выпадают из очереди
+        retryQueue.replaceAll { _, left -> left - 1 }
+        val due = retryQueue.entries.firstOrNull { it.value <= 0 }?.key ?: return null
+        retryQueue.remove(due)
+        return due
     }
 
     fun getDictionaryLines(): List<DictionaryLine> = fileService.getDictionaryLines()

@@ -1,4 +1,6 @@
 quiz:
   answer-size: 4
+  # слово с ошибкой вернётся на этом по счёту следующем вопросе
+  retry-after: 4
   word-filename: "/questions.txt"
   word-write-filename: "./src/main/resources/questions.txt"

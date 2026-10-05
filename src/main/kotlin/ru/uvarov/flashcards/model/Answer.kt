@@ -7,7 +7,7 @@ data class Answer(
     val translate: String,
     val correct: Boolean,
 ) {
-    // equals/hashCode игнорируют correct: дедупликация в QuizService.fillIfNotEnough
+    // equals/hashCode игнорируют correct: дедупликация в QuizService.fill
     // должна считать «правильный» и «случайно совпавший» одним и тем же ответом.
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

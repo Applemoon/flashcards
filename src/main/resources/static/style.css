@@ -1,40 +1,68 @@
+/* Палитра gruvbox (morhetz/gruvbox, colors/gruvbox.vim). По умолчанию тёмная,
+   светлая — по переключателю в шапке (prefs.js ставит data-theme на <html>). */
 :root {
-    --bg: #f5f1e8;
-    --bg-accent: #ede6d3;
-    --surface: #ffffff;
-    --text: #1d1d2e;
-    --muted: #6b6b80;
-    --accent: #c1272d;
-    --accent-soft: rgba(193, 39, 45, 0.08);
-    --success: #2d8659;
-    --error: #c1272d;
-    --border: #e5e0d3;
-    --shadow-sm: 0 1px 3px rgba(20, 20, 30, 0.06);
-    --shadow: 0 4px 16px rgba(20, 20, 30, 0.08);
-    --shadow-lg: 0 12px 40px rgba(20, 20, 30, 0.1);
+    color-scheme: dark;
+    --bg: #1d2021;            /* dark0_hard */
+    --bg-accent: #3c3836;     /* dark1 */
+    --surface: #282828;       /* dark0 */
+    --text: #ebdbb2;          /* light1 */
+    --muted: #a89984;         /* light4 */
+    --accent: #fe8019;        /* bright_orange */
+    --accent-soft: rgba(254, 128, 25, 0.14);
+    --glow: rgba(254, 128, 25, 0.14); /* пятно света в углу фона */
+    --on-fill: #282828;       /* текст на залитом акцентом/зелёным фоне */
+    --success: #b8bb26;       /* bright_green */
+    --success-glow: rgba(184, 187, 38, 0.22);
+    --error: #fb4934;         /* bright_red */
+    --error-soft: rgba(251, 73, 52, 0.12);
+    --border: #3c3836;        /* dark1 */
+    --border-strong: #504945; /* dark2 */
+    --spark-1: #fabd2f;
+    --spark-2: #83a598;
+    --spark-3: #fb4934;
+    --spark-4: #b8bb26;
+    --spark-5: #fe8019;
+    --spark-6: #d3869b;
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+    --shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+    --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.5);
     --radius: 14px;
     --radius-sm: 10px;
 }
 
-@media (prefers-color-scheme: dark) {
-    :root {
-        --bg: #16161f;
-        --bg-accent: #1d1d2a;
-        --surface: #232333;
-        --text: #f0f0f5;
-        --muted: #9090a8;
-        --accent: #e8505b;
-        --accent-soft: rgba(232, 80, 91, 0.14);
-        --success: #4ade80;
-        --error: #f87171;
-        --border: #34344a;
-        --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
-        --shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
-        --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.5);
-    }
+:root[data-theme="light"] {
+    color-scheme: light;
+    /* Нейтрали — холодные серые вместо кремовых light0..light4 gruvbox; акценты — faded-цвета gruvbox. */
+    --bg: #eceff1;
+    --bg-accent: #e2e6ea;
+    --surface: #f8f9fa;
+    --text: #282828;          /* dark0 */
+    --muted: #66707a;
+    --accent: #af3a03;        /* faded_orange */
+    --accent-soft: rgba(175, 58, 3, 0.1);
+    --glow: rgba(7, 102, 120, 0.07); /* faded_blue */
+    --on-fill: #f8f9fa;
+    --success: #79740e;       /* faded_green */
+    --success-glow: rgba(121, 116, 14, 0.24);
+    --error: #9d0006;         /* faded_red */
+    --error-soft: rgba(157, 0, 6, 0.08);
+    --border: #d8dde2;
+    --border-strong: #c2c9d0;
+    --spark-1: #b57614;
+    --spark-2: #076678;
+    --spark-3: #9d0006;
+    --spark-4: #79740e;
+    --spark-5: #af3a03;
+    --spark-6: #8f3f71;
+    --shadow-sm: 0 1px 3px rgba(40, 48, 56, 0.08);
+    --shadow: 0 4px 16px rgba(40, 48, 56, 0.1);
+    --shadow-lg: 0 12px 40px rgba(40, 48, 56, 0.12);
 }
 
 * { box-sizing: border-box; }
+
+/* display: flex у строк словаря иначе перебивает атрибут hidden */
+[hidden] { display: none !important; }
 
 html, body {
     margin: 0;
@@ -48,7 +76,7 @@ html, body {
 }
 
 body {
-    background-image: radial-gradient(circle at 20% -10%, var(--accent-soft) 0%, transparent 55%);
+    background-image: radial-gradient(circle at 20% -10%, var(--glow) 0%, transparent 55%);
     background-attachment: fixed;
 }
 
@@ -85,8 +113,39 @@ body {
 
 .nav a:hover {
     background: var(--accent);
-    color: #fff;
+    color: var(--on-fill);
 }
+
+.nav-toggle {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    padding: 0;
+    background: transparent;
+    color: var(--muted);
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.nav-toggle:hover {
+    background: var(--accent-soft);
+    color: var(--accent);
+}
+
+.nav-toggle svg {
+    width: 18px;
+    height: 18px;
+}
+
+/* Иконка показывает, куда переключит клик: в тёмной теме — солнце, в светлой — луна. */
+:root:not([data-theme="light"]) .icon-moon,
+:root[data-theme="light"] .icon-sun,
+:root[data-sound="off"] .icon-sound-on,
+:root:not([data-sound="off"]) .icon-sound-off { display: none; }
 
 .card {
     background: var(--surface);
@@ -95,6 +154,22 @@ body {
     box-shadow: var(--shadow-lg);
     border: 1px solid var(--border);
     text-align: center;
+}
+
+.card-top {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+}
+
+.retry-badge {
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: var(--error-soft);
+    color: var(--error);
+    font-size: 0.85rem;
+    font-weight: 600;
 }
 
 .combo {
@@ -164,7 +239,7 @@ body {
     font-weight: 500;
     background: var(--surface);
     color: var(--text);
-    border: 2px solid var(--border);
+    border: 2px solid var(--border-strong);
     border-radius: var(--radius-sm);
     cursor: pointer;
     transition: border-color 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease, background 0.15s ease;
@@ -182,6 +257,30 @@ body {
 
 .answer-btn:active:not(:disabled) { transform: translateY(0); }
 
+/* Номер клавиши в углу варианта; на тач-экранах клавиатуры нет — прячем. */
+.answer-key {
+    position: absolute;
+    top: 6px;
+    left: 9px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+}
+
+@media (hover: none) {
+    .answer-key,
+    .key-hint { display: none; }
+}
+
+.answer-hint {
+    display: block;
+    margin-top: 4px;
+    font-size: 0.85rem;
+    font-weight: 400;
+    color: var(--muted);
+}
+
 .answer-btn:disabled {
     cursor: not-allowed;
     opacity: 0.85;
@@ -190,12 +289,23 @@ body {
 
 .answer-btn.answer-correct,
 .answer-btn.answer-correct:disabled {
-    color: #fff;
+    color: var(--on-fill);
     border-color: var(--success);
     background: var(--success);
     opacity: 1;
-    box-shadow: 0 12px 28px rgba(45, 134, 89, 0.24);
+    box-shadow: 0 12px 28px var(--success-glow);
     animation: answer-pop 0.55s cubic-bezier(0.2, 1.7, 0.35, 1);
+}
+
+.answer-btn.answer-correct .answer-key { color: var(--on-fill); opacity: 0.6; }
+
+.answer-btn.answer-wrong,
+.answer-btn.answer-wrong:disabled {
+    color: var(--error);
+    border-color: var(--error);
+    background: var(--error-soft);
+    opacity: 1;
+    animation: combo-shake 0.35s ease;
 }
 
 .answer-btn.answer-correct::after {
@@ -206,15 +316,15 @@ body {
     width: 7px;
     height: 7px;
     border-radius: 999px;
-    background: #fff3a3;
+    background: var(--spark-1);
     pointer-events: none;
     box-shadow:
-        -44px -24px 0 #fff3a3,
-        -20px -38px 0 #7dd3fc,
-        24px -34px 0 #fca5a5,
-        46px -10px 0 #bbf7d0,
-        32px 26px 0 #fde68a,
-        -34px 28px 0 #c4b5fd;
+        -44px -24px 0 var(--spark-1),
+        -20px -38px 0 var(--spark-2),
+        24px -34px 0 var(--spark-3),
+        46px -10px 0 var(--spark-4),
+        32px 26px 0 var(--spark-5),
+        -34px 28px 0 var(--spark-6);
     animation: answer-spark 0.7s ease-out forwards;
 }
 
@@ -269,6 +379,14 @@ body {
 
 .skip-btn:hover .icon-spin { transform: rotate(-45deg); }
 
+.key-hint {
+    padding: 1px 6px;
+    border: 1px solid var(--border-strong);
+    border-radius: 5px;
+    font-size: 0.75rem;
+    opacity: 0.8;
+}
+
 .skip-btn svg {
     width: 16px;
     height: 16px;
@@ -285,6 +403,26 @@ body {
 .words-count strong {
     color: var(--text);
     font-weight: 700;
+}
+
+.words-filter {
+    display: block;
+    width: 100%;
+    margin: 0 0 14px;
+    padding: 10px 14px;
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 1rem;
+    box-shadow: var(--shadow-sm);
+}
+
+.words-filter:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .words-list {
@@ -353,6 +491,19 @@ body {
     user-select: none;
 }
 
+/* Вес слова: плюс — отвечал верно, минус — ошибался. Пустой у новых слов, но место держит. */
+.word-weight {
+    flex: 0 0 30px;
+    text-align: right;
+    font-size: 0.8rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.word-weight.weight-pos { color: var(--success); }
+
+.word-weight.weight-neg { color: var(--error); }
+
 .word-delete {
     flex: 0 0 auto;
     display: inline-flex;
@@ -376,7 +527,7 @@ body {
 }
 
 .word-delete:hover {
-    color: #fff;
+    color: var(--on-fill);
     background: var(--accent);
     border-color: var(--accent);
 }
@@ -402,7 +553,7 @@ body {
     padding: 0;
     border: 1.5px solid var(--accent);
     background: var(--accent);
-    color: #fff;
+    color: var(--on-fill);
     border-radius: 50%;
     cursor: pointer;
     transition: transform 0.1s ease, box-shadow 0.15s ease, filter 0.15s ease;
