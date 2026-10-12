@@ -147,7 +147,7 @@ class QuizControllerTest {
                 .param("correct", "true")
         ).andExpect(status().isNoContent)
 
-        verify(quizService).recordAnswer("утром", true)
+        verify(quizService).recordAnswer("утром", true, false)
     }
 
     @Test
@@ -158,7 +158,7 @@ class QuizControllerTest {
                 .param("correct", "false")
         ).andExpect(status().isNoContent)
 
-        verify(quizService).recordAnswer("утром", false)
+        verify(quizService).recordAnswer("утром", false, false)
     }
 
     @Test
@@ -181,6 +181,18 @@ class QuizControllerTest {
         mockMvc.perform(post("/typed").param("word", "черепаха"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$").value("WRONG"))
+    }
+
+    @Test
+    fun `POST answer - recall flag - forwarded to service`() {
+        mockMvc.perform(
+            post("/answer")
+                .param("word", "утром")
+                .param("correct", "true")
+                .param("recall", "true")
+        ).andExpect(status().isNoContent)
+
+        verify(quizService).recordAnswer("утром", true, true)
     }
 
     @Test

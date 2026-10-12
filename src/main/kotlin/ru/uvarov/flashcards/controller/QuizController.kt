@@ -73,8 +73,9 @@ class QuizController(
     fun recordAnswer(
         @RequestParam word: String,
         @RequestParam correct: Boolean,
+        @RequestParam(defaultValue = "false") recall: Boolean,
     ): ResponseEntity<Void> {
-        quizService.recordAnswer(word, correct)
+        quizService.recordAnswer(word, correct, recall)
         return ResponseEntity.noContent().build()
     }
 

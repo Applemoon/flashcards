@@ -14,6 +14,7 @@ import java.nio.file.StandardCopyOption
 class FileService(
     @Value("\${quiz.word-filename}") private val wordFilename: String,
     @Value("\${quiz.word-write-filename}") private val wordWriteFilename: String,
+    private val progressService: ProgressService,
 ) {
 
     final lateinit var fileContent: List<String>
@@ -46,6 +47,7 @@ class FileService(
         require(wordRu in wordPairs) { "Unknown word: $wordRu" }
         val newLines = fileContent.filterNot { line -> isWordPairLineFor(line, wordRu) }
         persist(newLines)
+        progressService.remove(wordRu)
         log.info("Deleted word '{}', {} words left", wordRu, wordPairs.size)
     }
 
@@ -74,6 +76,7 @@ class FileService(
             if (isWordPairLineFor(line, oldRu)) formatLine(ru, srb, keptWeight) else line
         }
         persist(newLines)
+        if (ru != oldRu) progressService.rename(oldRu, ru)
         log.info("Updated '{}' -> '{}={}' (weight={})", oldRu, ru, srb, keptWeight)
     }
 

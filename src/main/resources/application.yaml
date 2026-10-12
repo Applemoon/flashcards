@@ -4,3 +4,5 @@ quiz:
   retry-after: 4
   word-filename: "/questions.txt"
   word-write-filename: "./src/main/resources/questions.txt"
+  # расписание показов (FSRS): читается и пишется по этому пути, относительно cwd
+  progress-filename: "./src/main/resources/progress.txt"

@@ -6,12 +6,17 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.io.TempDir
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.verify
 import ru.uvarov.flashcards.model.DictionaryLine
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 
 class FileServiceTest {
+
+    private val progress = mock<ProgressService>()
 
     @Test
     fun `parseDictionary - valid lines - returns map`() {
@@ -74,7 +79,7 @@ class FileServiceTest {
 
     @Test
     fun `postConstruct - loads classpath resource - populates state`() {
-        val service = FileService("/test-words.txt", "/tmp/unused-write.txt")
+        val service = FileService("/test-words.txt", "/tmp/unused-write.txt", progress)
 
         service.postConstruct()
 
@@ -88,7 +93,7 @@ class FileServiceTest {
     @Test
     fun `deleteWord - existing word - removes from in-memory state`(@TempDir tmp: Path) {
         val write = tmp.resolve("questions.txt")
-        val service = FileService("/test-words.txt", write.toString())
+        val service = FileService("/test-words.txt", write.toString(), progress)
         service.postConstruct()
 
         service.deleteWord("вечер")
@@ -96,12 +101,13 @@ class FileServiceTest {
         assertFalse("вечер" in service.wordPairs)
         assertFalse(service.fileContent.contains("вечер=вече"))
         assertEquals(3, service.wordPairs.size)
+        verify(progress).remove("вечер")
     }
 
     @Test
     fun `deleteWord - existing word - rewrites file preserving headings and other entries`(@TempDir tmp: Path) {
         val write = tmp.resolve("questions.txt")
-        val service = FileService("/test-words.txt", write.toString())
+        val service = FileService("/test-words.txt", write.toString(), progress)
         service.postConstruct()
 
         service.deleteWord("вечер")
@@ -116,7 +122,7 @@ class FileServiceTest {
     @Test
     fun `deleteWord - unknown word - throws and leaves state untouched`(@TempDir tmp: Path) {
         val write = tmp.resolve("questions.txt")
-        val service = FileService("/test-words.txt", write.toString())
+        val service = FileService("/test-words.txt", write.toString(), progress)
         service.postConstruct()
         val pairsBefore = service.wordPairs.toMap()
 
@@ -131,12 +137,13 @@ class FileServiceTest {
     @Test
     fun `updateWord - same key new value - replaces translation`(@TempDir tmp: Path) {
         val write = tmp.resolve("questions.txt")
-        val service = FileService("/test-words.txt", write.toString())
+        val service = FileService("/test-words.txt", write.toString(), progress)
         service.postConstruct()
 
         service.updateWord("вечер", "вечер", "новый перевод")
 
         assertEquals("новый перевод", service.wordPairs["вечер"])
+        verify(progress, never()).rename("вечер", "вечер")
         assertTrue(service.fileContent.contains("вечер=новый перевод"))
         val written = Files.readString(write, StandardCharsets.UTF_8)
         assertTrue(written.contains("вечер=новый перевод"))
@@ -146,13 +153,14 @@ class FileServiceTest {
     @Test
     fun `updateWord - new russian key - renames entry preserving order`(@TempDir tmp: Path) {
         val write = tmp.resolve("questions.txt")
-        val service = FileService("/test-words.txt", write.toString())
+        val service = FileService("/test-words.txt", write.toString(), progress)
         service.postConstruct()
 
         service.updateWord("вечер", "вечерок", "вече")
 
         assertFalse("вечер" in service.wordPairs)
         assertEquals("вече", service.wordPairs["вечерок"])
+        verify(progress).rename("вечер", "вечерок")
         assertEquals(
             "#Категория один\nутром=ујутру\nвечерок=вече\nночь=ноћ\n\n#Категория два\nнеделя=седмица, недеља\n",
             Files.readString(write, StandardCharsets.UTF_8),
@@ -162,7 +170,7 @@ class FileServiceTest {
     @Test
     fun `updateWord - new ru collides with existing key - throws`(@TempDir tmp: Path) {
         val write = tmp.resolve("questions.txt")
-        val service = FileService("/test-words.txt", write.toString())
+        val service = FileService("/test-words.txt", write.toString(), progress)
         service.postConstruct()
 
         assertThrows<IllegalArgumentException> {
@@ -177,7 +185,7 @@ class FileServiceTest {
     @Test
     fun `updateWord - unknown old key - throws`(@TempDir tmp: Path) {
         val write = tmp.resolve("questions.txt")
-        val service = FileService("/test-words.txt", write.toString())
+        val service = FileService("/test-words.txt", write.toString(), progress)
         service.postConstruct()
 
         assertThrows<IllegalArgumentException> {
@@ -190,7 +198,7 @@ class FileServiceTest {
     @Test
     fun `updateWord - blank ru or srb - throws`(@TempDir tmp: Path) {
         val write = tmp.resolve("questions.txt")
-        val service = FileService("/test-words.txt", write.toString())
+        val service = FileService("/test-words.txt", write.toString(), progress)
         service.postConstruct()
 
         assertThrows<IllegalArgumentException> { service.updateWord("вечер", "  ", "вече") }
@@ -202,7 +210,7 @@ class FileServiceTest {
     @Test
     fun `updateWord - new ru contains equals or starts with hash - throws`(@TempDir tmp: Path) {
         val write = tmp.resolve("questions.txt")
-        val service = FileService("/test-words.txt", write.toString())
+        val service = FileService("/test-words.txt", write.toString(), progress)
         service.postConstruct()
 
         assertThrows<IllegalArgumentException> { service.updateWord("вечер", "a=b", "вече") }
@@ -212,7 +220,7 @@ class FileServiceTest {
     @Test
     fun `addWord - new pair - appends to end of file`(@TempDir tmp: Path) {
         val write = tmp.resolve("questions.txt")
-        val service = FileService("/test-words.txt", write.toString())
+        val service = FileService("/test-words.txt", write.toString(), progress)
         service.postConstruct()
 
         service.addWord("новое", "ново")
@@ -228,7 +236,7 @@ class FileServiceTest {
     @Test
     fun `addWord - whitespace around values - trimmed before saving`(@TempDir tmp: Path) {
         val write = tmp.resolve("questions.txt")
-        val service = FileService("/test-words.txt", write.toString())
+        val service = FileService("/test-words.txt", write.toString(), progress)
         service.postConstruct()
 
         service.addWord("  новое  ", "  ново  ")
@@ -240,7 +248,7 @@ class FileServiceTest {
     @Test
     fun `addWord - duplicate russian key - throws and leaves state untouched`(@TempDir tmp: Path) {
         val write = tmp.resolve("questions.txt")
-        val service = FileService("/test-words.txt", write.toString())
+        val service = FileService("/test-words.txt", write.toString(), progress)
         service.postConstruct()
         val pairsBefore = service.wordPairs.toMap()
 
@@ -255,7 +263,7 @@ class FileServiceTest {
     @Test
     fun `addWord - blank ru or srb - throws`(@TempDir tmp: Path) {
         val write = tmp.resolve("questions.txt")
-        val service = FileService("/test-words.txt", write.toString())
+        val service = FileService("/test-words.txt", write.toString(), progress)
         service.postConstruct()
 
         assertThrows<IllegalArgumentException> { service.addWord("   ", "ново") }
@@ -265,7 +273,7 @@ class FileServiceTest {
     @Test
     fun `addWord - ru contains equals or starts with hash - throws`(@TempDir tmp: Path) {
         val write = tmp.resolve("questions.txt")
-        val service = FileService("/test-words.txt", write.toString())
+        val service = FileService("/test-words.txt", write.toString(), progress)
         service.postConstruct()
 
         assertThrows<IllegalArgumentException> { service.addWord("a=b", "ново") }
@@ -314,7 +322,7 @@ class FileServiceTest {
 
     @Test
     fun `postConstruct - loads classpath resource - populates categories`() {
-        val service = FileService("/test-words.txt", "/tmp/unused-write.txt")
+        val service = FileService("/test-words.txt", "/tmp/unused-write.txt", progress)
 
         service.postConstruct()
 
@@ -359,7 +367,7 @@ class FileServiceTest {
     @Test
     fun `recordAnswer - correct - increments weight and persists`(@TempDir tmp: Path) {
         val write = tmp.resolve("questions.txt")
-        val service = FileService("/test-words.txt", write.toString())
+        val service = FileService("/test-words.txt", write.toString(), progress)
         service.postConstruct()
 
         service.recordAnswer("вечер", correct = true)
@@ -372,7 +380,7 @@ class FileServiceTest {
     @Test
     fun `recordAnswer - wrong - decrements weight`(@TempDir tmp: Path) {
         val write = tmp.resolve("questions.txt")
-        val service = FileService("/test-words.txt", write.toString())
+        val service = FileService("/test-words.txt", write.toString(), progress)
         service.postConstruct()
 
         service.recordAnswer("вечер", correct = false)
@@ -385,7 +393,7 @@ class FileServiceTest {
     @Test
     fun `recordAnswer - weight returns to zero - line drops weight suffix`(@TempDir tmp: Path) {
         val write = tmp.resolve("questions.txt")
-        val service = FileService("/test-words.txt", write.toString())
+        val service = FileService("/test-words.txt", write.toString(), progress)
         service.postConstruct()
 
         service.recordAnswer("вечер", correct = true)
@@ -400,7 +408,7 @@ class FileServiceTest {
     @Test
     fun `updateWord - existing word with weight - preserves weight in new line`(@TempDir tmp: Path) {
         val write = tmp.resolve("questions.txt")
-        val service = FileService("/test-words.txt", write.toString())
+        val service = FileService("/test-words.txt", write.toString(), progress)
         service.postConstruct()
         service.recordAnswer("вечер", correct = true)
         service.recordAnswer("вечер", correct = true)
@@ -414,7 +422,7 @@ class FileServiceTest {
     @Test
     fun `recordAnswer - unknown word - throws`(@TempDir tmp: Path) {
         val write = tmp.resolve("questions.txt")
-        val service = FileService("/test-words.txt", write.toString())
+        val service = FileService("/test-words.txt", write.toString(), progress)
         service.postConstruct()
 
         assertThrows<IllegalArgumentException> {

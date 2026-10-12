@@ -10,24 +10,41 @@ import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import ru.uvarov.flashcards.model.DictionaryLine
+import ru.uvarov.flashcards.model.WordProgress
+import java.time.Clock
+import java.time.LocalDate
+import java.time.ZoneOffset
 
 private const val ANSWERS_SIZE = 4
 private const val RUNS = 100
 private const val RETRY_AFTER = 3
+private val TODAY = LocalDate.of(2026, 10, 12)
+private val CLOCK = Clock.fixed(TODAY.atStartOfDay(ZoneOffset.UTC).toInstant(), ZoneOffset.UTC)
 
 class QuizServiceTest {
 
     private fun mockFile(
         pairs: Map<String, String>,
-        weights: Map<String, Int>? = null,
         categories: Map<String, String>? = null,
     ): FileService {
         val fs = mock<FileService>()
         whenever(fs.wordPairs).thenReturn(pairs)
-        whenever(fs.wordWeights).thenReturn(weights ?: pairs.keys.associateWith { 0 })
         whenever(fs.wordCategories).thenReturn(categories ?: pairs.keys.associateWith { "default" })
         return fs
     }
+
+    private fun mockProgress(progress: Map<String, WordProgress> = emptyMap()): ProgressService {
+        val ps = mock<ProgressService>()
+        whenever(ps.progress).thenReturn(progress)
+        return ps
+    }
+
+    private fun quizService(fileService: FileService, progressService: ProgressService = mockProgress()) =
+        QuizService(ANSWERS_SIZE, RETRY_AFTER, fileService, progressService, CLOCK)
+
+    // Слово, отвеченное lastDaysAgo дней назад, со сроком через dueInDays дней (отрицательный — просрочено).
+    private fun reviewed(stability: Double, lastDaysAgo: Long, dueInDays: Long) =
+        WordProgress(stability, 5.0, TODAY.minusDays(lastDaysAgo), TODAY.plusDays(dueInDays))
 
     private fun isSentence(srb: String) = srb.trim().let { it.endsWith(".") || it.endsWith("?") }
 
@@ -42,7 +59,7 @@ class QuizServiceTest {
                 "вчера" to "јуче",
             )
         )
-        val service = QuizService(ANSWERS_SIZE, RETRY_AFTER, fileService)
+        val service = quizService(fileService)
 
         repeat(RUNS) {
             val question = service.getQuestion()
@@ -59,7 +76,7 @@ class QuizServiceTest {
             "ночь" to "ноћ",
             "полночь" to "поноћ",
         )
-        val service = QuizService(ANSWERS_SIZE, RETRY_AFTER, mockFile(dict))
+        val service = quizService(mockFile(dict))
 
         repeat(RUNS) {
             val question = service.getQuestion()
@@ -76,7 +93,7 @@ class QuizServiceTest {
             "с1" to "aa", "с2" to "bb", "с3" to "cc", "с4" to "dd",
             "в1" to "p q r s?", "в2" to "t u v w?", "в3" to "x y z a?", "в4" to "b c d e?",
         )
-        val service = QuizService(ANSWERS_SIZE, RETRY_AFTER, mockFile(dict))
+        val service = quizService(mockFile(dict))
 
         repeat(RUNS) {
             val question = service.getQuestion()
@@ -95,7 +112,7 @@ class QuizServiceTest {
             "b1" to "y1", "b2" to "y2", "b3" to "y3", "b4" to "y4",
         )
         val categories = dict.keys.associateWith { if (it.startsWith("a")) "A" else "B" }
-        val service = QuizService(ANSWERS_SIZE, RETRY_AFTER, mockFile(dict, categories = categories))
+        val service = quizService(mockFile(dict, categories = categories))
 
         repeat(RUNS) {
             val question = service.getQuestion()
@@ -118,7 +135,7 @@ class QuizServiceTest {
             "чужое1" to "veče",
             "чужое2" to "noć",
         )
-        val service = QuizService(ANSWERS_SIZE, RETRY_AFTER, mockFile(dict))
+        val service = quizService(mockFile(dict))
 
         repeat(RUNS) {
             val question = service.getQuestion()
@@ -141,7 +158,7 @@ class QuizServiceTest {
             "слово3" to "ноћ",
             "вопрос" to "како је?",
         )
-        val service = QuizService(ANSWERS_SIZE, RETRY_AFTER, mockFile(dict))
+        val service = quizService(mockFile(dict))
 
         repeat(RUNS) {
             val question = service.getQuestion()
@@ -151,35 +168,77 @@ class QuizServiceTest {
     }
 
     @Test
-    fun `getQuestion - one word has strongly negative weight - is picked far more often`() {
+    fun `getQuestion - due word among new ones - due word asked first`() {
         val dict = (1..10).associate { "слово$it" to "perevod$it" }
-        val weights = dict.keys.associateWith { 0 }.toMutableMap()
-        weights["слово1"] = -8
-        val service = QuizService(ANSWERS_SIZE, RETRY_AFTER, mockFile(dict, weights))
+        val service = quizService(mockFile(dict), mockProgress(mapOf("слово7" to reviewed(2.0, 3, -1))))
 
-        val runs = 500
-        val counts = mutableMapOf<String, Int>()
-        repeat(runs) {
-            val q = service.getQuestion()
-            counts.merge(q.word, 1) { acc, _ -> acc + 1 }
-        }
-        // 0.7^-8 ≈ 17.5 vs 1 для остальных, доля «слово1» должна быть существенно выше 1/10.
-        val uniformShare = 1.0 / dict.size
-        val actualShare = (counts["слово1"] ?: 0).toDouble() / runs
-        assertTrue(
-            actualShare > uniformShare * 3,
-            "Слово с весом -8 должно появляться чаще равномерного в >3 раза, было $actualShare vs $uniformShare",
+        assertEquals("слово7", service.getQuestion().word)
+    }
+
+    @Test
+    fun `getQuestion - several due words - least retrievable first`() {
+        val dict = (1..10).associate { "слово$it" to "perevod$it" }
+        val progress = mapOf(
+            "слово2" to reviewed(stability = 30.0, lastDaysAgo = 30, dueInDays = 0),
+            "слово5" to reviewed(stability = 2.0, lastDaysAgo = 10, dueInDays = -8),
         )
+        val service = quizService(mockFile(dict), mockProgress(progress))
+
+        assertEquals("слово5", service.getQuestion().word)
+        assertEquals("слово2", service.getQuestion().word)
+    }
+
+    @Test
+    fun `getQuestion - nothing due - only new words asked`() {
+        val dict = (1..10).associate { "слово$it" to "perevod$it" }
+        val service = quizService(mockFile(dict), mockProgress(mapOf("слово1" to reviewed(10.0, 1, 9))))
+
+        repeat(RUNS) {
+            assertTrue(service.getQuestion().word != "слово1")
+        }
+    }
+
+    @Test
+    fun `getQuestion - no due and no new words - least retrievable asked ahead of schedule`() {
+        val dict = (1..6).associate { "слово$it" to "perevod$it" }
+        val progress = dict.keys.associateWith { reviewed(100.0, 1, 99) } + ("слово4" to reviewed(3.0, 2, 1))
+        val service = quizService(mockFile(dict), mockProgress(progress))
+
+        assertEquals("слово4", service.getQuestion().word)
+    }
+
+    @Test
+    fun `getQuestion - skipped due word - not asked again within retryAfter questions`() {
+        val dict = (1..10).associate { "слово$it" to "perevod$it" }
+        val service = quizService(mockFile(dict), mockProgress(mapOf("слово3" to reviewed(2.0, 5, -3))))
+
+        assertEquals("слово3", service.getQuestion().word)
+        repeat(RETRY_AFTER) { assertTrue(service.getQuestion().word != "слово3") }
+        assertEquals("слово3", service.getQuestion().word)
+    }
+
+    @Test
+    fun `getQuestion - due count - only dictionary words due today or earlier`() {
+        val dict = (1..5).associate { "слово$it" to "perevod$it" }
+        val progress = mapOf(
+            "слово1" to reviewed(2.0, 2, 0),
+            "слово2" to reviewed(2.0, 4, -2),
+            "слово3" to reviewed(2.0, 1, 1),
+            "удалённое" to reviewed(2.0, 4, -2),
+        )
+        val service = quizService(mockFile(dict), mockProgress(progress))
+
+        assertEquals(2, service.getQuestion().dueCount)
     }
 
     @Test
     fun `getQuestion - sentence and single word - sentence flag and latin answer set`() {
-        val service = QuizService(ANSWERS_SIZE, RETRY_AFTER, mockFile(mapOf("болит голова" to "боли ме глава.")))
+        val service = quizService(mockFile(mapOf("болит голова" to "боли ме глава.")))
         val sentence = service.getQuestion()
         assertTrue(sentence.sentence)
         assertEquals("boli me glava.", sentence.answerLatin)
 
-        val word = QuizService(ANSWERS_SIZE, RETRY_AFTER, mockFile(mapOf("черепаха" to "корњача"))).getQuestion()
+        val word = quizService(mockFile(mapOf("черепаха" to "корњача"))).getQuestion()
         assertFalse(word.sentence)
         assertEquals("kornjača", word.answerLatin)
     }
@@ -187,13 +246,15 @@ class QuizServiceTest {
     @Test
     fun `checkTyped - correct or accent - recorded as correct`() {
         val fileService = mockFile(mapOf("черепаха" to "корњача", "ящерица" to "гуштер"))
-        val service = QuizService(ANSWERS_SIZE, RETRY_AFTER, fileService)
+        val progressService = mockProgress()
+        val service = quizService(fileService, progressService)
 
         assertEquals(AnswerChecker.Verdict.CORRECT, service.checkTyped("черепаха", "корњача"))
         assertEquals(AnswerChecker.Verdict.ACCENT, service.checkTyped("ящерица", "guster"))
 
         verify(fileService).recordAnswer("черепаха", true)
         verify(fileService).recordAnswer("ящерица", true)
+        verify(progressService).record("черепаха", Fsrs.Rating.GOOD, TODAY)
     }
 
     @Test
@@ -222,25 +283,22 @@ class QuizServiceTest {
         )
         val fileService = mock<FileService>()
         whenever(fileService.getDictionaryLines()).thenReturn(content)
-        val service = QuizService(ANSWERS_SIZE, RETRY_AFTER, fileService)
+        val service = quizService(fileService)
 
         assertEquals(content, service.getDictionaryLines())
     }
 
-    // У всех слов, кроме «слово1», вес 30: случайно они почти не выпадают (0.7^30 ≈ 2e-5).
-    // Поэтому «слово2» ровно на RETRY_AFTER-м вопросе — заслуга очереди повторов, а не рандома.
-    private fun retryFixture(): Pair<QuizService, FileService> {
+    // Все слова новые, поэтому выбор случайный; «слово2» с меткой retry — заслуга очереди повторов.
+    private fun retryFixture(progressService: ProgressService = mockProgress()): Pair<QuizService, FileService> {
         val dict = (1..50).associate { "слово$it" to "perevod$it" }
-        val weights = dict.keys.associateWith { 30 }.toMutableMap()
-        weights["слово1"] = 0
-        val fileService = mockFile(dict, weights)
-        return QuizService(ANSWERS_SIZE, RETRY_AFTER, fileService) to fileService
+        val fileService = mockFile(dict)
+        return quizService(fileService, progressService) to fileService
     }
 
     @Test
     fun `recordAnswer - wrong - word comes back as retry after retryAfter questions`() {
         val (service, fileService) = retryFixture()
-        service.recordAnswer("слово2", correct = false)
+        service.recordAnswer("слово2", correct = false, recall = false)
 
         val questions = (1..RETRY_AFTER).map { service.getQuestion() }
 
@@ -251,14 +309,16 @@ class QuizServiceTest {
     }
 
     @Test
-    fun `recordAnswer - correct on retry question - weight untouched`() {
-        val (service, fileService) = retryFixture()
-        service.recordAnswer("слово2", correct = false)
+    fun `recordAnswer - correct on retry question - weight and schedule untouched`() {
+        val progressService = mockProgress()
+        val (service, fileService) = retryFixture(progressService)
+        service.recordAnswer("слово2", correct = false, recall = false)
         repeat(RETRY_AFTER) { service.getQuestion() }
 
-        service.recordAnswer("слово2", correct = true)
+        service.recordAnswer("слово2", correct = true, recall = false)
 
         verify(fileService, never()).recordAnswer("слово2", true)
+        verify(progressService, never()).record("слово2", Fsrs.Rating.HARD, TODAY)
     }
 
     @Test
@@ -266,19 +326,47 @@ class QuizServiceTest {
         val (service, fileService) = retryFixture()
         service.getQuestion()
 
-        service.recordAnswer("слово2", correct = true)
+        service.recordAnswer("слово2", correct = true, recall = false)
 
         verify(fileService).recordAnswer("слово2", true)
     }
 
     @Test
+    fun `recordAnswer - wrong - rated again`() {
+        val progressService = mockProgress()
+        val (service, _) = retryFixture(progressService)
+
+        service.recordAnswer("слово2", correct = false, recall = true)
+
+        verify(progressService).record("слово2", Fsrs.Rating.AGAIN, TODAY)
+    }
+
+    @Test
+    fun `recordAnswer - correct choice from options - rated hard`() {
+        val progressService = mockProgress()
+        val (service, _) = retryFixture(progressService)
+
+        service.recordAnswer("слово2", correct = true, recall = false)
+
+        verify(progressService).record("слово2", Fsrs.Rating.HARD, TODAY)
+    }
+
+    @Test
+    fun `recordAnswer - correct recall - rated good`() {
+        val progressService = mockProgress()
+        val (service, _) = retryFixture(progressService)
+
+        service.recordAnswer("слово2", correct = true, recall = true)
+
+        verify(progressService).record("слово2", Fsrs.Rating.GOOD, TODAY)
+    }
+
+    @Test
     fun `getQuestion - retry word deleted from dictionary - dropped from queue`() {
         val (service, fileService) = retryFixture()
-        service.recordAnswer("слово2", correct = false)
+        service.recordAnswer("слово2", correct = false, recall = false)
         val pairsLeft = fileService.wordPairs - "слово2"
-        val weightsLeft = fileService.wordWeights - "слово2"
         whenever(fileService.wordPairs).thenReturn(pairsLeft)
-        whenever(fileService.wordWeights).thenReturn(weightsLeft)
 
         repeat(RETRY_AFTER * 2) {
             val question = service.getQuestion()

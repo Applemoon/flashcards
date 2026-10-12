@@ -5,22 +5,30 @@ import org.springframework.stereotype.Service
 import ru.uvarov.flashcards.model.Answer
 import ru.uvarov.flashcards.model.DictionaryLine
 import ru.uvarov.flashcards.model.Question
-import kotlin.math.pow
-import kotlin.random.Random
+import ru.uvarov.flashcards.model.WordProgress
+import java.time.Clock
+import java.time.LocalDate
+import java.time.temporal.ChronoUnit
 
 @Service
 class QuizService(
     @Value("\${quiz.answer-size}") private val answersSize: Int,
     @Value("\${quiz.retry-after}") private val retryAfter: Int,
     private val fileService: FileService,
+    private val progressService: ProgressService,
+    private val clock: Clock,
 ) {
 
     // Слово с ошибкой → сколько вопросов осталось до повтора. Живёт в памяти: после перезапуска
     // очередь пуста, но вес ошибки уже записан в файл.
     private val retryQueue = LinkedHashMap<String, Int>()
 
-    // Слово, выданное повтором: верный ответ на него вес не поднимает, иначе ошибка снова стирается.
+    // Слово, выданное повтором: верный ответ на него вес и расписание не трогает, иначе ошибка снова стирается.
     private var currentRetry: String? = null
+
+    // Последние заданные слова. Не возвращаются раньше, чем через retryAfter вопросов, как и ошибки:
+    // иначе пропущенное «самое забытое» слово выпадало бы снова сразу.
+    private val recent = ArrayDeque<String>()
 
     @Synchronized
     fun getQuestion(): Question {
@@ -29,8 +37,13 @@ class QuizService(
         val types = wordPairs.mapValues { (_, srb) -> classify(srb) }
         val keys = wordPairs.keys.shuffled()
 
+        val today = LocalDate.now(clock)
+        val progress = progressService.progress
+
         currentRetry = nextRetry(wordPairs.keys)
-        val wordRu = currentRetry ?: pickWeighted(fileService.wordWeights)
+        val wordRu = currentRetry ?: pickScheduled(wordPairs.keys, progress, today)
+        recent.addLast(wordRu)
+        if (recent.size > retryAfter) recent.removeFirst()
         val translateSrb = wordPairs.getValue(wordRu)
         val targetType = types.getValue(wordRu)
         val targetCategory = categories[wordRu]
@@ -57,16 +70,25 @@ class QuizService(
             retry = currentRetry != null,
             sentence = targetType == WordType.SENTENCE,
             answerLatin = AnswerChecker.toLatin(translateSrb),
+            dueCount = wordPairs.keys.count { progress[it]?.due?.isAfter(today) == false },
         )
     }
 
-    // Один ответ на вопрос: фронтенд шлёт только первый клик.
+    // Один ответ на вопрос: фронтенд шлёт только первый клик. recall — перевод вспомнен без вариантов
+    // («Ввод», «Карточки»): для расписания это «хорошо», а верный выбор из вариантов — только «трудно»,
+    // узнать легче, чем вспомнить, и интервал от него растёт медленнее.
     @Synchronized
-    fun recordAnswer(wordRu: String, correct: Boolean) {
+    fun recordAnswer(wordRu: String, correct: Boolean, recall: Boolean) {
         val wasRetry = wordRu == currentRetry
         currentRetry = null
         if (correct && wasRetry) return
         fileService.recordAnswer(wordRu, correct)
+        val rating = when {
+            !correct -> Fsrs.Rating.AGAIN
+            recall -> Fsrs.Rating.GOOD
+            else -> Fsrs.Rating.HARD
+        }
+        progressService.record(wordRu, rating, LocalDate.now(clock))
         if (!correct) retryQueue[wordRu] = retryAfter
     }
 
@@ -75,7 +97,7 @@ class QuizService(
     fun checkTyped(wordRu: String, input: String): AnswerChecker.Verdict {
         val expected = requireNotNull(fileService.wordPairs[wordRu]) { "Unknown word: $wordRu" }
         val verdict = AnswerChecker.check(input, expected)
-        recordAnswer(wordRu, verdict != AnswerChecker.Verdict.WRONG)
+        recordAnswer(wordRu, verdict != AnswerChecker.Verdict.WRONG, recall = true)
         return verdict
     }
 
@@ -89,18 +111,20 @@ class QuizService(
 
     fun getDictionaryLines(): List<DictionaryLine> = fileService.getDictionaryLines()
 
-    // Bias toward low/negative weight words. 0.7^weight: weight=-3 -> ~2.9x, 0 -> 1, +5 -> ~0.17, +10 -> ~0.028.
-    private fun pickWeighted(weights: Map<String, Int>): String {
-        require(weights.isNotEmpty()) { "Dictionary is empty" }
-        val scores = weights.mapValues { (_, w) -> 0.7.pow(w.toDouble()) }
-        val total = scores.values.sum()
-        var r = Random.nextDouble() * total
-        for ((word, score) in scores) {
-            r -= score
-            if (r <= 0.0) return word
-        }
-        return scores.keys.last()
+    // Сначала слова, которым подошёл срок, — самое вероятно забытое первым; потом новые, в случайном
+    // порядке; когда нет ни тех, ни других, досрочно идёт самое вероятно забытое из остальных.
+    private fun pickScheduled(words: Set<String>, progress: Map<String, WordProgress>, today: LocalDate): String {
+        require(words.isNotEmpty()) { "Dictionary is empty" }
+        val candidates = (words - recent.toSet()).ifEmpty { words }
+        val (seen, new) = candidates.partition { it in progress }
+        val forgetting = compareBy<String> { retrievability(progress.getValue(it), today) }
+        return seen.filter { !progress.getValue(it).due.isAfter(today) }.minWithOrNull(forgetting)
+            ?: new.randomOrNull()
+            ?: seen.minWith(forgetting)
     }
+
+    private fun retrievability(p: WordProgress, today: LocalDate): Double =
+        Fsrs.retrievability(p.stability, ChronoUnit.DAYS.between(p.lastReview, today))
 
     // Добавляет дистракторы, проходящие accept, пока не наберётся answersSize.
     // Дубликаты (в т.ч. совпавший правильный ответ) отсеиваются через Answer.equals.

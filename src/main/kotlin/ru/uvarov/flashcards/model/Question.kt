@@ -8,4 +8,6 @@ data class Question(
     val sentence: Boolean = false,
     // Верный перевод латиницей — «Ввод» и «Карточки» показывают его рядом с кириллицей.
     val answerLatin: String = "",
+    // Слов, которым по расписанию пора на повторение (срок сегодня или раньше).
+    val dueCount: Int = 0,
 )
