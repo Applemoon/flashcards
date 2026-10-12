@@ -7,6 +7,9 @@
     <link rel="stylesheet" href="/style.css"/>
     <script src="/prefs.js"></script>
     <script th:inline="javascript">
+        // Вкладка: quiz — выбор из вариантов, type — ввод перевода, cards — вспомнить про себя и оценить,
+        // mix — каждый вопрос в случайном из трёх режимов.
+        const MODE = /*[[${mode}]]*/ 'quiz';
         // Первый вопрос приходит вместе со страницей, следующие — через GET /question без перезагрузки.
         let question = /*[[${question}]]*/ null;
         // Комбо живёт в sessionStorage, чтобы пережить переход на «Слова» и обратно.
@@ -16,6 +19,10 @@
         // Верный ответ найден, ждём автоперехода: «Пропустить» в этот момент просто листает дальше.
         let solved = false;
         let nextTimer = null;
+        // Режим текущего вопроса: совпадает с MODE, кроме «Микса» и предложений во «Вводе».
+        let questionMode = null;
+        // Варианты квиза спрятаны до «Вспомнил» или ответ карточки ещё не открыт.
+        let hidden = false;
 
         function readCombo() {
             try { return parseInt(sessionStorage.getItem(COMBO_KEY), 10) || 0; } catch (e) { return 0; }
@@ -37,28 +44,184 @@
             combo.classList.toggle('combo-active', value > 0);
         }
 
+        // «Микс» не повторяет режим дважды подряд. Предложения не печатают — их оценивают как карточку.
+        function pickMode(q) {
+            if (MODE !== 'mix') return MODE === 'type' && q.sentence ? 'cards' : MODE;
+            const modes = ['quiz', 'type', 'cards'].filter(function(mode) {
+                return mode !== questionMode && !(mode === 'type' && q.sentence);
+            });
+            return modes[Math.floor(Math.random() * modes.length)];
+        }
+
         function renderQuestion(q) {
             question = q;
             answered = false;
             solved = false;
+            hidden = false;
+            questionMode = pickMode(q);
             document.getElementById('prompt').textContent = q.word;
             document.getElementById('retry').hidden = !q.retry;
-            const answers = document.getElementById('answers');
-            answers.replaceChildren();
+            const stage = document.getElementById('stage');
+            stage.replaceChildren();
+            if (questionMode === 'quiz') renderChoices(stage, q);
+            else if (questionMode === 'type') renderTyping(stage);
+            else renderCard(stage);
+            updateSkipHint();
+        }
+
+        // Подсказка «пробел» у «Пропустить» — только когда пробел и правда пропускает.
+        function updateSkipHint() {
+            document.getElementById('skip-key').hidden = questionMode !== 'quiz' || hidden;
+        }
+
+        function el(tag, className, text) {
+            const node = document.createElement(tag);
+            if (className) node.className = className;
+            if (text !== undefined) node.textContent = text;
+            return node;
+        }
+
+        function revealButton(text, onclick) {
+            const btn = el('button', 'reveal-btn', text);
+            btn.type = 'button';
+            btn.append(el('span', 'key-hint', 'пробел'));
+            btn.onclick = onclick;
+            return btn;
+        }
+
+        function renderChoices(stage, q) {
+            const answers = el('div', 'answers');
             q.answersList.forEach(function(answer, i) {
-                const btn = document.createElement('button');
+                const btn = el('button', 'answer-btn');
                 btn.type = 'button';
-                btn.className = 'answer-btn';
-                const key = document.createElement('span');
-                key.className = 'answer-key';
-                key.textContent = i + 1;
-                const text = document.createElement('span');
-                text.className = 'answer-text';
-                text.textContent = answer.word;
-                btn.append(key, text);
+                btn.append(el('span', 'answer-key', i + 1), el('span', 'answer-text', answer.word));
                 btn.onclick = function() { btnClick(btn, answer); };
                 answers.appendChild(btn);
             });
+            stage.appendChild(answers);
+            if (!gateOn()) return;
+            // «Сначала вспомнить»: без вариантов перед глазами приходится вспоминать, а не исключать.
+            hidden = true;
+            answers.hidden = true;
+            stage.appendChild(revealButton('Вспомнил — показать варианты', showChoices));
+        }
+
+        function showChoices() {
+            hidden = false;
+            document.querySelector('#stage .answers').hidden = false;
+            document.querySelector('#stage .reveal-btn').remove();
+            updateSkipHint();
+        }
+
+        function toggleGate() {
+            togglePref('gate', 'on', 'off');
+            if (!gateOn() && hidden && questionMode === 'quiz') showChoices();
+        }
+
+        function renderTyping(stage) {
+            const form = el('form', 'type-form');
+            const input = el('input', 'type-input');
+            input.autocomplete = 'off';
+            input.spellcheck = false;
+            input.setAttribute('autocapitalize', 'off');
+            input.placeholder = 'латиницей или кириллицей';
+            form.append(input, el('div', 'type-hint', 'Enter — проверить, пустой Enter — не помню'));
+            form.onsubmit = function(e) {
+                e.preventDefault();
+                if (answered) nextQuestion(); else submitTyped(input);
+            };
+            stage.appendChild(form);
+            input.focus();
+        }
+
+        function submitTyped(input) {
+            answered = true;
+            input.readOnly = true;
+            const params = new URLSearchParams({word: question.word, input: input.value});
+            fetch('/typed?' + params.toString(), { method: 'POST' })
+                .then(function(response) {
+                    if (response.ok) {
+                        response.json().then(function(verdict) { showVerdict(input, verdict); });
+                        return;
+                    }
+                    answered = false;
+                    input.readOnly = false;
+                    response.text().then(function(text) { alert("Не удалось проверить: " + (text || response.status)); });
+                });
+        }
+
+        // Без диакритики (ACCENT) засчитывается, но ответ ждёт Enter, чтобы успеть увидеть подсвеченные буквы.
+        function showVerdict(input, verdict) {
+            const form = input.closest('form');
+            form.querySelector('.type-hint').remove();
+            if (verdict === 'WRONG') {
+                const gaveUp = input.value.trim() === '';
+                if (gaveUp) input.placeholder = 'не помню';
+                input.classList.add('type-wrong');
+                if (readCombo() > 0) setCombo(0, 'combo-reset');
+                if (!gaveUp) playSound(false);
+            } else {
+                solved = true;
+                input.classList.add(verdict === 'CORRECT' ? 'type-correct' : 'type-accent');
+                setCombo(readCombo() + 1, 'combo-bump');
+                playSound(true, readCombo());
+            }
+            form.appendChild(revealAnswer(question, verdict === 'ACCENT'));
+            if (verdict === 'CORRECT') nextTimer = setTimeout(nextQuestion, 1000);
+            else form.appendChild(el('div', 'type-hint', 'Enter — дальше'));
+        }
+
+        // Верный ответ кириллицей и латиницей; markDiacritics подсвечивает в латинице č ć š ž đ.
+        function revealAnswer(q, markDiacritics) {
+            const box = el('div', 'reveal');
+            const answer = q.answersList.find(function(a) { return a.correct; }).word;
+            box.append(el('div', 'reveal-answer', answer));
+            if (q.answerLatin === answer) return box;
+            const latin = el('div', 'reveal-latin');
+            if (markDiacritics) {
+                q.answerLatin.split(/([čćšžđČĆŠŽĐ])/).forEach(function(part, i) {
+                    latin.append(i % 2 ? el('mark', null, part) : part);
+                });
+            } else {
+                latin.textContent = q.answerLatin;
+            }
+            box.append(latin);
+            return box;
+        }
+
+        function renderCard(stage) {
+            hidden = true;
+            stage.appendChild(revealButton('Показать ответ', showCard));
+        }
+
+        function showCard() {
+            hidden = false;
+            const grades = el('div', 'answers');
+            grades.append(gradeButton('Вспомнил', 1, true), gradeButton('Не вспомнил', 2, false));
+            document.getElementById('stage').replaceChildren(revealAnswer(question, false), grades);
+        }
+
+        function gradeButton(text, key, correct) {
+            const btn = el('button', 'answer-btn ' + (correct ? 'grade-yes' : 'grade-no'));
+            btn.type = 'button';
+            btn.append(el('span', 'answer-key', key), el('span', 'answer-text', text));
+            btn.onclick = function() { grade(correct); };
+            return btn;
+        }
+
+        // Самооценка карточки. «Не вспомнил» — без звука ошибки: честное «не знаю» не наказываем.
+        function grade(correct) {
+            if (answered) return;
+            answered = true;
+            fetch('/answer?word=' + encodeURIComponent(question.word) + '&correct=' + correct,
+                  { method: 'POST' });
+            if (correct) {
+                setCombo(readCombo() + 1, 'combo-bump');
+                playSound(true, readCombo());
+            } else if (readCombo() > 0) {
+                setCombo(0, 'combo-reset');
+            }
+            nextQuestion();
         }
 
         function nextQuestion() {
@@ -74,18 +237,27 @@
             renderQuestion(question);
         });
 
-        // 1–4 — варианты ответа, пробел — пропустить. Клавиши с модификаторами и ввод в поля не трогаем.
+        // 1–4 — варианты ответа или оценка карточки, пробел — открыть варианты/ответ, иначе пропустить.
+        // Клавиши с модификаторами и ввод в поля не трогаем.
         // Цифру берём из e.code (физическая клавиша): e.key зависит от раскладки, а у владельца их четыре.
         window.addEventListener('keydown', function(e) {
             if (e.metaKey || e.ctrlKey || e.altKey || e.repeat) return;
             if (e.target.tagName === 'INPUT') return;
             const digit = /^(?:Digit|Numpad)([1-9])$/.exec(e.code);
             if (digit) {
-                const btn = document.querySelectorAll('.answer-btn')[Number(digit[1]) - 1];
+                if (hidden) return;
+                const btn = document.querySelectorAll('#stage .answer-btn')[Number(digit[1]) - 1];
                 if (btn && !btn.disabled) btn.click();
             } else if (e.code === 'Space') {
                 e.preventDefault(); // иначе пробел ещё и нажмёт кнопку в фокусе
-                skip();
+                if (hidden) {
+                    if (questionMode === 'quiz') showChoices(); else showCard();
+                } else if (questionMode !== 'cards') {
+                    skip();
+                }
+            } else if ((e.code === 'Enter' || e.code === 'NumpadEnter') && questionMode === 'type' && answered) {
+                e.preventDefault();
+                nextQuestion();
             }
         }, true);
 
@@ -168,7 +340,10 @@
 <body>
 <div class="container">
     <nav class="nav">
-        <a href="/">Quiz</a>
+        <a href="/" th:classappend="${mode == 'quiz'} ? 'active'">Quiz</a>
+        <a href="/type" th:classappend="${mode == 'type'} ? 'active'">Ввод</a>
+        <a href="/cards" th:classappend="${mode == 'cards'} ? 'active'">Карточки</a>
+        <a href="/mix" th:classappend="${mode == 'mix'} ? 'active'">Микс</a>
         <a href="/words">Слова</a>
         <button type="button" class="nav-toggle" onclick="toggleSound()" title="Звук вкл/выкл">
             <svg class="icon-sound-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -206,9 +381,13 @@
                 Комбо: <span class="combo-value">0</span>
             </div>
             <div class="retry-badge" id="retry" title="Здесь недавно была ошибка" hidden>Повтор</div>
+            <button type="button" class="gate-toggle" th:if="${mode == 'quiz' or mode == 'mix'}"
+                    onclick="toggleGate()" title="Прятать варианты, пока не вспомнишь перевод сам">
+                Сначала вспомнить
+            </button>
         </div>
         <h1 class="prompt" id="prompt" th:text="${question.word}">Слово</h1>
-        <div class="answers" id="answers"></div>
+        <div id="stage"></div>
         <div class="skip-actions">
             <button type="button" class="skip-btn" onclick="skip()">
                 <svg class="icon-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -219,7 +398,7 @@
                     <path d="M3 21v-5h5"/>
                 </svg>
                 Пропустить
-                <span class="key-hint">пробел</span>
+                <span class="key-hint" id="skip-key">пробел</span>
             </button>
             <button type="button" class="skip-btn" onclick="deleteWord()">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"

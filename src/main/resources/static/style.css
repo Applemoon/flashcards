@@ -116,6 +116,11 @@ body {
     color: var(--on-fill);
 }
 
+.nav a.active {
+    background: var(--accent-soft);
+    color: var(--accent);
+}
+
 .nav-toggle {
     flex: 0 0 auto;
     display: inline-flex;
@@ -189,6 +194,29 @@ body {
 .combo svg {
     width: 16px;
     height: 16px;
+}
+
+/* «Сначала вспомнить» — переключатель квиза; включён — подсвечен как активное комбо. */
+.gate-toggle {
+    padding: 6px 14px;
+    background: transparent;
+    color: var(--muted);
+    border: 1.5px dashed var(--border-strong);
+    border-radius: 999px;
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.gate-toggle:hover { color: var(--accent); }
+
+:root[data-gate="on"] .gate-toggle {
+    color: var(--accent);
+    border-style: solid;
+    border-color: var(--accent);
+    background: var(--accent-soft);
 }
 
 .combo.combo-active {
@@ -345,6 +373,110 @@ body {
         transform: translate(-50%, -50%) scale(1.9);
     }
 }
+
+/* Кнопка «показать варианты/ответ»: пунктир — за ней ещё ничего нет. */
+.reveal-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 18px 16px;
+    background: transparent;
+    color: var(--muted);
+    border: 2px dashed var(--border-strong);
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 1.05rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.reveal-btn:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: var(--accent-soft);
+}
+
+.reveal { margin-bottom: 20px; }
+
+.reveal-answer {
+    font-size: 1.6rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+.reveal-latin {
+    color: var(--muted);
+    font-size: 1rem;
+}
+
+.reveal-latin mark {
+    padding: 0 2px;
+    border-radius: 3px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-weight: 700;
+}
+
+.answer-btn.grade-yes { border-color: var(--success); }
+
+.answer-btn.grade-no { border-color: var(--error); }
+
+.type-form {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+}
+
+.type-input {
+    width: 100%;
+    padding: 14px 16px;
+    background: var(--bg);
+    color: var(--text);
+    border: 2px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 1.4rem;
+    text-align: center;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.type-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.type-input.type-correct {
+    border-color: var(--success);
+    box-shadow: 0 12px 28px var(--success-glow);
+    animation: answer-pop 0.55s cubic-bezier(0.2, 1.7, 0.35, 1);
+}
+
+/* Верно, но без диакритики: засчитано, оранжевым — чтобы заметить подсвеченные буквы. */
+.type-input.type-accent {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.type-input.type-wrong {
+    border-color: var(--error);
+    background: var(--error-soft);
+    box-shadow: none;
+    animation: combo-shake 0.35s ease;
+}
+
+.type-input.type-wrong::placeholder { color: var(--error); }
+
+.type-hint {
+    color: var(--muted);
+    font-size: 0.85rem;
+}
+
+.type-form .reveal { margin-bottom: 0; }
 
 .skip-actions {
     display: flex;

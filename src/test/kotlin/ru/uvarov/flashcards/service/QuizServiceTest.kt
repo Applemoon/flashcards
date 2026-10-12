@@ -2,6 +2,7 @@ package ru.uvarov.flashcards.service
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock
@@ -169,6 +170,48 @@ class QuizServiceTest {
             actualShare > uniformShare * 3,
             "Слово с весом -8 должно появляться чаще равномерного в >3 раза, было $actualShare vs $uniformShare",
         )
+    }
+
+    @Test
+    fun `getQuestion - sentence and single word - sentence flag and latin answer set`() {
+        val service = QuizService(ANSWERS_SIZE, RETRY_AFTER, mockFile(mapOf("болит голова" to "боли ме глава.")))
+        val sentence = service.getQuestion()
+        assertTrue(sentence.sentence)
+        assertEquals("boli me glava.", sentence.answerLatin)
+
+        val word = QuizService(ANSWERS_SIZE, RETRY_AFTER, mockFile(mapOf("черепаха" to "корњача"))).getQuestion()
+        assertFalse(word.sentence)
+        assertEquals("kornjača", word.answerLatin)
+    }
+
+    @Test
+    fun `checkTyped - correct or accent - recorded as correct`() {
+        val fileService = mockFile(mapOf("черепаха" to "корњача", "ящерица" to "гуштер"))
+        val service = QuizService(ANSWERS_SIZE, RETRY_AFTER, fileService)
+
+        assertEquals(AnswerChecker.Verdict.CORRECT, service.checkTyped("черепаха", "корњача"))
+        assertEquals(AnswerChecker.Verdict.ACCENT, service.checkTyped("ящерица", "guster"))
+
+        verify(fileService).recordAnswer("черепаха", true)
+        verify(fileService).recordAnswer("ящерица", true)
+    }
+
+    @Test
+    fun `checkTyped - wrong or blank - recorded as wrong and queued for retry`() {
+        val (service, fileService) = retryFixture()
+
+        assertEquals(AnswerChecker.Verdict.WRONG, service.checkTyped("слово2", ""))
+
+        verify(fileService).recordAnswer("слово2", false)
+        val questions = (1..RETRY_AFTER).map { service.getQuestion() }
+        assertEquals("слово2", questions.last().word)
+    }
+
+    @Test
+    fun `checkTyped - unknown word - throws IllegalArgumentException`() {
+        val (service, _) = retryFixture()
+
+        assertThrows(IllegalArgumentException::class.java) { service.checkTyped("нет такого", "x") }
     }
 
     @Test

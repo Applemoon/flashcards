@@ -51,7 +51,13 @@ class QuizService(
         fill(answers, prioritized, wordPairs) { true }
         answers.shuffle()
 
-        return Question(wordRu, answers, retry = currentRetry != null)
+        return Question(
+            wordRu,
+            answers,
+            retry = currentRetry != null,
+            sentence = targetType == WordType.SENTENCE,
+            answerLatin = AnswerChecker.toLatin(translateSrb),
+        )
     }
 
     // Один ответ на вопрос: фронтенд шлёт только первый клик.
@@ -62,6 +68,15 @@ class QuizService(
         if (correct && wasRetry) return
         fileService.recordAnswer(wordRu, correct)
         if (!correct) retryQueue[wordRu] = retryAfter
+    }
+
+    // Ответ из «Ввода»: сверка на сервере и запись как обычного ответа. Без диакритики — засчитывается.
+    @Synchronized
+    fun checkTyped(wordRu: String, input: String): AnswerChecker.Verdict {
+        val expected = requireNotNull(fileService.wordPairs[wordRu]) { "Unknown word: $wordRu" }
+        val verdict = AnswerChecker.check(input, expected)
+        recordAnswer(wordRu, verdict != AnswerChecker.Verdict.WRONG)
+        return verdict
     }
 
     private fun nextRetry(knownWords: Set<String>): String? {

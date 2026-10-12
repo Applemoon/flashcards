@@ -21,6 +21,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.view
 import ru.uvarov.flashcards.model.Answer
 import ru.uvarov.flashcards.model.DictionaryLine
 import ru.uvarov.flashcards.model.Question
+import ru.uvarov.flashcards.service.AnswerChecker
 import ru.uvarov.flashcards.service.FileService
 import ru.uvarov.flashcards.service.QuizService
 
@@ -45,6 +46,7 @@ class QuizControllerTest {
             .andExpect(status().isOk)
             .andExpect(view().name("quiz"))
             .andExpect(model().attribute("question", question))
+            .andExpect(model().attribute("mode", "quiz"))
     }
 
     @Test
@@ -56,6 +58,24 @@ class QuizControllerTest {
             .andExpect(status().isOk)
             .andExpect(view().name("quiz"))
             .andExpect(model().attribute("question", question))
+    }
+
+    @Test
+    fun `GET type - returns quiz view with type mode`() {
+        val question = Question("утром", listOf(Answer("ујутру", "утром", correct = true)))
+        whenever(quizService.getQuestion()).thenReturn(question)
+
+        mockMvc.perform(get("/type"))
+            .andExpect(status().isOk)
+            .andExpect(view().name("quiz"))
+            .andExpect(model().attribute("mode", "type"))
+            .andExpect(model().attribute("question", question))
+    }
+
+    @Test
+    fun `GET unknown trainer mode - returns 404`() {
+        mockMvc.perform(get("/typing"))
+            .andExpect(status().isNotFound)
     }
 
     @Test
@@ -139,6 +159,28 @@ class QuizControllerTest {
         ).andExpect(status().isNoContent)
 
         verify(quizService).recordAnswer("утром", false)
+    }
+
+    @Test
+    fun `POST typed - forwards input and returns verdict as json`() {
+        whenever(quizService.checkTyped("черепаха", "kornjaca")).thenReturn(AnswerChecker.Verdict.ACCENT)
+
+        mockMvc.perform(
+            post("/typed")
+                .param("word", "черепаха")
+                .param("input", "kornjaca")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$").value("ACCENT"))
+    }
+
+    @Test
+    fun `POST typed - no input param - checked as blank`() {
+        whenever(quizService.checkTyped("черепаха", "")).thenReturn(AnswerChecker.Verdict.WRONG)
+
+        mockMvc.perform(post("/typed").param("word", "черепаха"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$").value("WRONG"))
     }
 
     @Test

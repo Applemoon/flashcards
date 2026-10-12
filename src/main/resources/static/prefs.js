@@ -5,9 +5,11 @@
     try {
         root.dataset.theme = localStorage.getItem('theme') || 'dark';
         root.dataset.sound = localStorage.getItem('sound') || 'on';
+        root.dataset.gate = localStorage.getItem('gate') || 'off';
     } catch (e) {
         root.dataset.theme = 'dark';
         root.dataset.sound = 'on';
+        root.dataset.gate = 'off';
     }
 })();
 
@@ -22,3 +24,6 @@ function toggleTheme() { togglePref('theme', 'light', 'dark'); }
 function toggleSound() { togglePref('sound', 'off', 'on'); }
 
 function soundOn() { return document.documentElement.dataset.sound !== 'off'; }
+
+// «Сначала вспомнить» в квизе: варианты спрятаны до нажатия «Вспомнил».
+function gateOn() { return document.documentElement.dataset.gate === 'on'; }

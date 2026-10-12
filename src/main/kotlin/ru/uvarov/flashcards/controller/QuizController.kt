@@ -5,11 +5,13 @@ import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseBody
 import ru.uvarov.flashcards.model.Question
+import ru.uvarov.flashcards.service.AnswerChecker
 import ru.uvarov.flashcards.service.FileService
 import ru.uvarov.flashcards.service.QuizService
 
@@ -19,9 +21,14 @@ class QuizController(
     private val fileService: FileService,
 ) {
 
-    @GetMapping("/", "/quiz")
-    fun quiz(model: Model): String {
+    @GetMapping("/")
+    fun root(model: Model): String = trainer("quiz", model)
+
+    // Все вкладки-тренажёры — одна страница quiz.html: режим решает, как показать вопрос.
+    @GetMapping("/{mode:quiz|type|cards|mix}")
+    fun trainer(@PathVariable mode: String, model: Model): String {
         model.addAttribute("question", quizService.getQuestion())
+        model.addAttribute("mode", mode)
         return "quiz"
     }
 
@@ -70,4 +77,11 @@ class QuizController(
         quizService.recordAnswer(word, correct)
         return ResponseEntity.noContent().build()
     }
+
+    @PostMapping("/typed")
+    @ResponseBody
+    fun checkTyped(
+        @RequestParam word: String,
+        @RequestParam(defaultValue = "") input: String,
+    ): AnswerChecker.Verdict = quizService.checkTyped(word, input)
 }
